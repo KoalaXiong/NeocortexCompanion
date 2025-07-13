@@ -1,0 +1,199 @@
+import { useState, useRef } from "react";
+import { useLocation, useParams } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Save, FileText, FileDown, Plus, Link as LinkIcon, Palette } from "lucide-react";
+import BubbleCard from "@/components/bubble-card";
+import { apiRequest } from "@/lib/queryClient";
+import type { BubbleWithMessage, InsertBubble } from "@shared/schema";
+
+export default function Bubbles() {
+  const { conversationId } = useParams();
+  const id = conversationId ? parseInt(conversationId) : null;
+  const [, setLocation] = useLocation();
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+
+  const { data: bubbles = [], isLoading } = useQuery<BubbleWithMessage[]>({
+    queryKey: ["/api/conversations", id, "bubbles"],
+    enabled: !!id,
+  });
+
+  // Create bubbles from messages if they don't exist
+  const createBubbleMutation = useMutation({
+    mutationFn: async (data: InsertBubble) => {
+      const response = await apiRequest("POST", "/api/bubbles", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", id, "bubbles"] });
+    },
+  });
+
+  // Update bubble position
+  const updateBubbleMutation = useMutation({
+    mutationFn: async ({ bubbleId, x, y }: { bubbleId: number; x: number; y: number }) => {
+      const response = await apiRequest("PATCH", `/api/bubbles/${bubbleId}`, { x, y });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", id, "bubbles"] });
+    },
+  });
+
+  // Get messages to create bubbles from
+  const { data: messages = [] } = useQuery({
+    queryKey: ["/api/conversations", id, "messages"],
+    enabled: !!id,
+  });
+
+  // Create bubbles for messages that don't have them
+  const handleCreateBubbles = () => {
+    const categories = ["core-insight", "supporting-evidence", "personal-reflection", "action-items", "key-question"];
+    const colors = ["blue", "green", "purple", "orange", "red"];
+
+    messages.forEach((message, index) => {
+      const existingBubble = bubbles.find(b => b.messageId === message.id);
+      if (!existingBubble) {
+        createBubbleMutation.mutate({
+          messageId: message.id,
+          x: 100 + (index % 3) * 350,
+          y: 100 + Math.floor(index / 3) * 200,
+          width: 280,
+          height: 120,
+          category: categories[index % categories.length],
+          color: colors[index % colors.length],
+        });
+      }
+    });
+  };
+
+  const handleBubbleMove = (bubbleId: number, x: number, y: number) => {
+    updateBubbleMutation.mutate({ bubbleId, x, y });
+  };
+
+  const handleSaveLayout = () => {
+    // Layout is automatically saved when bubbles are moved
+    alert("Layout saved successfully!");
+  };
+
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading bubbles...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-screen flex flex-col gradient-purple-blue">
+      {/* Bubbles Header */}
+      <div className="gradient-primary-to-secondary text-white px-4 py-4 shadow-sm">
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocation(`/chat/${id}`)}
+              className="hover:bg-white/20 text-white"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h2 className="text-xl font-bold">Bubble Organization</h2>
+              <p className="text-sm text-purple-200">Organize your thoughts spatially</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-3">
+            <Button
+              onClick={handleSaveLayout}
+              variant="ghost"
+              size="sm"
+              className="bg-white/20 hover:bg-white/30 text-white"
+            >
+              <Save className="mr-2 h-4 w-4" />
+              Save Layout
+            </Button>
+            <Button
+              onClick={() => setLocation(`/article/${id}`)}
+              size="sm"
+              className="bg-white text-primary hover:bg-gray-100"
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Create Article
+            </Button>
+            <Button
+              onClick={() => window.open(`/api/export-pdf/${id}`, '_blank')}
+              size="sm"
+              className="bg-yellow-400 text-yellow-900 hover:bg-yellow-300"
+            >
+              <FileDown className="mr-2 h-4 w-4" />
+              Export PDF
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Canvas Area */}
+      <div className="flex-1 relative overflow-hidden">
+        <div 
+          ref={canvasRef}
+          className="absolute inset-0 p-6"
+          style={{
+            backgroundImage: "radial-gradient(circle, rgba(139, 92, 246, 0.2) 1px, transparent 1px)",
+            backgroundSize: "20px 20px"
+          }}
+        >
+          {bubbles.length === 0 ? (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center">
+                <p className="text-gray-600 mb-4">No bubbles created yet.</p>
+                <Button onClick={handleCreateBubbles}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Bubbles from Messages
+                </Button>
+              </div>
+            </div>
+          ) : (
+            bubbles.map((bubble) => (
+              <BubbleCard
+                key={bubble.id}
+                bubble={bubble}
+                onMove={handleBubbleMove}
+              />
+            ))
+          )}
+        </div>
+
+        {/* Floating Tools */}
+        <div className="absolute bottom-6 right-6 space-y-3">
+          <Button
+            onClick={handleCreateBubbles}
+            size="sm"
+            className="bg-white bubble-shadow rounded-2xl p-3 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
+            variant="ghost"
+          >
+            <Plus className="h-5 w-5" />
+          </Button>
+          <Button
+            size="sm"
+            className="bg-white bubble-shadow rounded-2xl p-3 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
+            variant="ghost"
+          >
+            <LinkIcon className="h-5 w-5" />
+          </Button>
+          <Button
+            size="sm"
+            className="bg-white bubble-shadow rounded-2xl p-3 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
+            variant="ghost"
+          >
+            <Palette className="h-5 w-5" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
