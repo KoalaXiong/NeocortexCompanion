@@ -105,6 +105,13 @@ The application uses four main tables:
 
 ### Recent Changes
 
+- **January 15, 2025**: Fixed bubble drag functionality and layout persistence
+  - Resolved bubble dragging issues by optimizing useEffect dependencies in BubbleCard component
+  - Fixed position synchronization between component state and database
+  - Added proper event propagation handling to prevent conflicts with dropdown menus
+  - Bubble positions now save automatically during drag and restore properly on page reload
+  - Enhanced Save Layout button with meaningful user feedback
+
 - **January 15, 2025**: Enhanced bubble color functionality and PDF filename defaulting
   - Fixed bubble color changes by replacing dynamic Tailwind classes with static color mappings
   - Added proper color class generation to ensure all CSS classes are included in build

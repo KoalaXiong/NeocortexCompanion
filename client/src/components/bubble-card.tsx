@@ -80,7 +80,6 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
-    console.log('Mouse down on bubble', bubble.id);
     setIsDragging(true);
     const rect = cardRef.current?.getBoundingClientRect();
     if (rect) {
@@ -97,14 +96,12 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
       e.preventDefault();
       const newX = e.clientX - dragOffset.x;
       const newY = e.clientY - dragOffset.y;
-      console.log('Moving bubble', bubble.id, 'to', newX, newY);
       setPosition({ x: newX, y: newY });
     };
 
     const handleMouseUp = (e: MouseEvent) => {
       if (isDragging) {
         e.preventDefault();
-        console.log('Mouse up on bubble', bubble.id, 'at position', position);
         setIsDragging(false);
         const x = Math.round(Math.max(0, position.x));
         const y = Math.round(Math.max(0, position.y));
@@ -113,17 +110,15 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
     };
 
     if (isDragging) {
-      console.log('Adding event listeners for bubble', bubble.id);
       document.addEventListener('mousemove', handleMouseMove, { passive: false });
       document.addEventListener('mouseup', handleMouseUp, { passive: false });
       
       return () => {
-        console.log('Removing event listeners for bubble', bubble.id);
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isDragging, dragOffset.x, dragOffset.y, position.x, position.y, bubble.id, onMove]);
+  }, [isDragging, dragOffset.x, dragOffset.y]);
 
   const formatTime = (date: Date | string) => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
