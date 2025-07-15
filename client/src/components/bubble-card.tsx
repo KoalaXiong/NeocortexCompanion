@@ -91,17 +91,14 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
 
   const handleMouseMove = (e: MouseEvent) => {
     if (!isDragging) return;
-
     const newX = e.clientX - dragOffset.x;
     const newY = e.clientY - dragOffset.y;
-    
     setPosition({ x: newX, y: newY });
   };
 
   const handleMouseUp = () => {
     if (isDragging) {
       setIsDragging(false);
-      // Ensure position values are valid integers
       const x = Math.round(Math.max(0, position.x));
       const y = Math.round(Math.max(0, position.y));
       onMove(bubble.id, x, y);
