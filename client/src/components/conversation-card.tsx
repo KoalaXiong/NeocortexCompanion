@@ -1,14 +1,18 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { MessageSquare, Workflow, MoreHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { MessageSquare, Workflow, MoreHorizontal, Edit, Copy, Trash2, FileText } from "lucide-react";
 import type { ConversationWithStats } from "@shared/schema";
 
 interface ConversationCardProps {
   conversation: ConversationWithStats;
+  onEdit?: (id: number, name: string) => void;
+  onDuplicate?: (id: number) => void;
+  onDelete?: (id: number) => void;
 }
 
-export default function ConversationCard({ conversation }: ConversationCardProps) {
+export default function ConversationCard({ conversation, onEdit, onDuplicate, onDelete }: ConversationCardProps) {
   const formatDate = (date: Date | string) => {
     const d = new Date(date);
     const now = new Date();
@@ -52,9 +56,31 @@ export default function ConversationCard({ conversation }: ConversationCardProps
             <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
               {conversation.messageCount} message{conversation.messageCount !== 1 ? 's' : ''}
             </span>
-            <Button variant="ghost" size="sm">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onEdit?.(conversation.id, conversation.name)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Name
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onDuplicate?.(conversation.id)}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Duplicate
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => onDelete?.(conversation.id)}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         

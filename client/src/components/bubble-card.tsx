@@ -1,14 +1,18 @@
 import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { GripVertical } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { GripVertical, Palette, Tag } from "lucide-react";
 import type { BubbleWithMessage } from "@shared/schema";
 
 interface BubbleCardProps {
   bubble: BubbleWithMessage;
   onMove: (bubbleId: number, x: number, y: number) => void;
+  onColorChange?: (bubbleId: number, color: string) => void;
+  onCategoryChange?: (bubbleId: number, category: string) => void;
 }
 
-export default function BubbleCard({ bubble, onMove }: BubbleCardProps) {
+export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryChange }: BubbleCardProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: bubble.x, y: bubble.y });
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -59,7 +63,10 @@ export default function BubbleCard({ bubble, onMove }: BubbleCardProps) {
   const handleMouseUp = () => {
     if (isDragging) {
       setIsDragging(false);
-      onMove(bubble.id, position.x, position.y);
+      // Ensure position values are valid integers
+      const x = Math.round(Math.max(0, position.x));
+      const y = Math.round(Math.max(0, position.y));
+      onMove(bubble.id, x, y);
     }
   };
 
@@ -102,7 +109,62 @@ export default function BubbleCard({ bubble, onMove }: BubbleCardProps) {
           <span className={`bg-${color}-100 text-${color}-700 px-2 py-1 rounded-full text-xs font-medium`}>
             {getCategoryLabel(bubble.category)}
           </span>
-          <GripVertical className="h-4 w-4 text-gray-400" />
+          <div className="flex items-center space-x-1">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                  <Palette className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onColorChange?.(bubble.id, 'blue')}>
+                  <div className="w-3 h-3 bg-blue-500 rounded-full mr-2" />
+                  Blue
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onColorChange?.(bubble.id, 'green')}>
+                  <div className="w-3 h-3 bg-green-500 rounded-full mr-2" />
+                  Green
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onColorChange?.(bubble.id, 'purple')}>
+                  <div className="w-3 h-3 bg-purple-500 rounded-full mr-2" />
+                  Purple
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onColorChange?.(bubble.id, 'orange')}>
+                  <div className="w-3 h-3 bg-orange-500 rounded-full mr-2" />
+                  Orange
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onColorChange?.(bubble.id, 'red')}>
+                  <div className="w-3 h-3 bg-red-500 rounded-full mr-2" />
+                  Red
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                  <Tag className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onCategoryChange?.(bubble.id, 'core-insight')}>
+                  Core Insight
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onCategoryChange?.(bubble.id, 'supporting-evidence')}>
+                  Supporting Evidence
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onCategoryChange?.(bubble.id, 'personal-reflection')}>
+                  Personal Reflection
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onCategoryChange?.(bubble.id, 'action-items')}>
+                  Action Items
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onCategoryChange?.(bubble.id, 'key-question')}>
+                  Key Question
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <GripVertical className="h-4 w-4 text-gray-400" />
+          </div>
         </div>
         <p className="text-gray-800 font-medium text-sm leading-relaxed mb-3">
           {bubble.message.text}

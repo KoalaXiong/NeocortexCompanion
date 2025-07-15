@@ -5,16 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Home, Plus, Search } from "lucide-react";
 import ConversationCard from "@/components/conversation-card";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { ConversationWithStats, InsertConversation } from "@shared/schema";
 
 export default function Conversations() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("recent");
+  const [editingConversation, setEditingConversation] = useState<{ id: number; name: string } | null>(null);
+  const [newName, setNewName] = useState("");
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: conversations = [], isLoading } = useQuery<ConversationWithStats[]>({
     queryKey: ["/api/conversations"],
@@ -31,10 +36,57 @@ export default function Conversations() {
     },
   });
 
+  const updateConversationMutation = useMutation({
+    mutationFn: async ({ id, name }: { id: number; name: string }) => {
+      const response = await apiRequest("PATCH", `/api/conversations/${id}`, { name });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      setEditingConversation(null);
+      toast({ title: "Conversation updated successfully" });
+    },
+  });
+
+  const deleteConversationMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/conversations/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      toast({ title: "Conversation deleted successfully" });
+    },
+  });
+
   const handleNewConversation = () => {
     const conversationName = prompt("Enter conversation name:");
     if (conversationName?.trim()) {
       createConversationMutation.mutate({ name: conversationName.trim() });
+    }
+  };
+
+  const handleEditConversation = (id: number, currentName: string) => {
+    setEditingConversation({ id, name: currentName });
+    setNewName(currentName);
+  };
+
+  const handleUpdateConversation = () => {
+    if (editingConversation && newName.trim()) {
+      updateConversationMutation.mutate({ id: editingConversation.id, name: newName.trim() });
+    }
+  };
+
+  const handleDeleteConversation = (id: number) => {
+    if (confirm("Are you sure you want to delete this conversation? This action cannot be undone.")) {
+      deleteConversationMutation.mutate(id);
+    }
+  };
+
+  const handleDuplicateConversation = async (id: number) => {
+    const originalConversation = conversations.find(c => c.id === id);
+    if (originalConversation) {
+      const newName = `${originalConversation.name} (Copy)`;
+      createConversationMutation.mutate({ name: newName });
     }
   };
 
@@ -146,10 +198,44 @@ export default function Conversations() {
         ) : (
           <div className="grid gap-6">
             {filteredConversations.map((conversation) => (
-              <ConversationCard key={conversation.id} conversation={conversation} />
+              <ConversationCard 
+                key={conversation.id} 
+                conversation={conversation}
+                onEdit={handleEditConversation}
+                onDuplicate={handleDuplicateConversation}
+                onDelete={handleDeleteConversation}
+              />
             ))}
           </div>
         )}
+
+        {/* Edit Conversation Dialog */}
+        <Dialog open={editingConversation !== null} onOpenChange={() => setEditingConversation(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Conversation Name</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Enter conversation name"
+                onKeyDown={(e) => e.key === 'Enter' && handleUpdateConversation()}
+              />
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setEditingConversation(null)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleUpdateConversation}
+                  disabled={!newName.trim() || updateConversationMutation.isPending}
+                >
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

@@ -30,10 +30,13 @@ export default function Bubbles() {
     },
   });
 
-  // Update bubble position
+  // Update bubble position/properties
   const updateBubbleMutation = useMutation({
-    mutationFn: async ({ bubbleId, x, y }: { bubbleId: number; x: number; y: number }) => {
-      const response = await apiRequest("PATCH", `/api/bubbles/${bubbleId}`, { x, y });
+    mutationFn: async ({ bubbleId, x, y, color, category }: { bubbleId: number; x: number; y: number; color?: string; category?: string }) => {
+      const updates: any = { x, y };
+      if (color) updates.color = color;
+      if (category) updates.category = category;
+      const response = await apiRequest("PATCH", `/api/bubbles/${bubbleId}`, updates);
       return response.json();
     },
     onSuccess: () => {
@@ -66,6 +69,30 @@ export default function Bubbles() {
         });
       }
     });
+  };
+
+  const handleBubbleColorChange = (bubbleId: number, newColor: string) => {
+    const bubble = bubbles.find(b => b.id === bubbleId);
+    if (bubble) {
+      updateBubbleMutation.mutate({ 
+        bubbleId, 
+        x: bubble.x, 
+        y: bubble.y, 
+        color: newColor 
+      });
+    }
+  };
+
+  const handleBubbleCategoryChange = (bubbleId: number, newCategory: string) => {
+    const bubble = bubbles.find(b => b.id === bubbleId);
+    if (bubble) {
+      updateBubbleMutation.mutate({ 
+        bubbleId, 
+        x: bubble.x, 
+        y: bubble.y, 
+        category: newCategory 
+      });
+    }
   };
 
   const handleBubbleMove = (bubbleId: number, x: number, y: number) => {
@@ -163,6 +190,8 @@ export default function Bubbles() {
                 key={bubble.id}
                 bubble={bubble}
                 onMove={handleBubbleMove}
+                onColorChange={handleBubbleColorChange}
+                onCategoryChange={handleBubbleCategoryChange}
               />
             ))
           )}
