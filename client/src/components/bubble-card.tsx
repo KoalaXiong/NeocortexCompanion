@@ -87,7 +87,7 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
   };
 
   const wordCount = bubble.message.text.split(' ').length;
-  const color = getCategoryColor(bubble.category);
+  const color = bubble.color || getCategoryColor(bubble.category);
 
   return (
     <Card
