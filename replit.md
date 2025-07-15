@@ -105,6 +105,14 @@ The application uses four main tables:
 
 ### Recent Changes
 
+- **January 15, 2025**: Added keyword input functionality to bubble cards
+  - Added title field to bubbles database schema with automatic migration
+  - Implemented editable keyword input displayed on left of category tags
+  - Keywords share the same color styling as bubble categories for visual consistency
+  - Added click-to-edit functionality with keyboard shortcuts (Enter to save, Escape to cancel)
+  - Keyword inputs auto-resize based on content length
+  - Implemented optimistic updates for smooth real-time editing experience
+
 - **January 15, 2025**: Fixed bubble drag functionality and layout persistence
   - Resolved bubble dragging issues by optimizing useEffect dependencies in BubbleCard component
   - Fixed position synchronization between component state and database

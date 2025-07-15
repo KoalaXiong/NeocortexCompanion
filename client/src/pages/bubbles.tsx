@@ -32,14 +32,15 @@ export default function Bubbles() {
 
   // Update bubble position/properties
   const updateBubbleMutation = useMutation({
-    mutationFn: async ({ bubbleId, x, y, color, category }: { bubbleId: number; x: number; y: number; color?: string; category?: string }) => {
+    mutationFn: async ({ bubbleId, x, y, color, category, title }: { bubbleId: number; x: number; y: number; color?: string; category?: string; title?: string }) => {
       const updates: any = { x, y };
       if (color) updates.color = color;
       if (category) updates.category = category;
+      if (title !== undefined) updates.title = title;
       const response = await apiRequest("PATCH", `/api/bubbles/${bubbleId}`, updates);
       return response.json();
     },
-    onMutate: async ({ bubbleId, x, y, color, category }) => {
+    onMutate: async ({ bubbleId, x, y, color, category, title }) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ["/api/conversations", id, "bubbles"] });
       
@@ -51,7 +52,7 @@ export default function Bubbles() {
         if (!old) return old;
         return old.map(bubble => 
           bubble.id === bubbleId 
-            ? { ...bubble, x, y, ...(color && { color }), ...(category && { category }) }
+            ? { ...bubble, x, y, ...(color && { color }), ...(category && { category }), ...(title !== undefined && { title }) }
             : bubble
         );
       });
@@ -118,6 +119,18 @@ export default function Bubbles() {
         x: bubble.x, 
         y: bubble.y, 
         category: newCategory 
+      });
+    }
+  };
+
+  const handleBubbleTitleChange = (bubbleId: number, newTitle: string) => {
+    const bubble = bubbles.find(b => b.id === bubbleId);
+    if (bubble) {
+      updateBubbleMutation.mutate({ 
+        bubbleId, 
+        x: bubble.x, 
+        y: bubble.y, 
+        title: newTitle 
       });
     }
   };
@@ -231,6 +244,7 @@ export default function Bubbles() {
                 onMove={handleBubbleMove}
                 onColorChange={handleBubbleColorChange}
                 onCategoryChange={handleBubbleCategoryChange}
+                onTitleChange={handleBubbleTitleChange}
               />
             ))
           )}

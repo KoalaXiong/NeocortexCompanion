@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { GripVertical, Palette, Tag } from "lucide-react";
 import type { BubbleWithMessage } from "@shared/schema";
@@ -10,12 +11,15 @@ interface BubbleCardProps {
   onMove: (bubbleId: number, x: number, y: number) => void;
   onColorChange?: (bubbleId: number, color: string) => void;
   onCategoryChange?: (bubbleId: number, category: string) => void;
+  onTitleChange?: (bubbleId: number, title: string) => void;
 }
 
-export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryChange }: BubbleCardProps) {
+export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryChange, onTitleChange }: BubbleCardProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: bubble.x, y: bubble.y });
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [localTitle, setLocalTitle] = useState(bubble.title || "");
   const cardRef = useRef<HTMLDivElement>(null);
   
   // Update position only when bubble data changes and we're not dragging
@@ -24,6 +28,11 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
       setPosition({ x: bubble.x, y: bubble.y });
     }
   }, [bubble.x, bubble.y, isDragging]);
+
+  // Update local title when bubble data changes
+  useEffect(() => {
+    setLocalTitle(bubble.title || "");
+  }, [bubble.title]);
 
   const getColorClasses = (color: string) => {
     const colorClassMap = {
@@ -128,6 +137,22 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const handleTitleSave = () => {
+    if (onTitleChange) {
+      onTitleChange(bubble.id, localTitle);
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleTitleSave();
+    } else if (e.key === 'Escape') {
+      setLocalTitle(bubble.title || "");
+      setIsEditingTitle(false);
+    }
+  };
+
   const wordCount = bubble.message.text.split(' ').length;
   const color = bubble.color || getCategoryColor(bubble.category);
   const colorClasses = getColorClasses(color);
@@ -149,9 +174,34 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
     >
       <div className="p-4">
         <div className="flex items-start justify-between mb-2">
-          <span className={`${colorClasses.bg} ${colorClasses.text} px-2 py-1 rounded-full text-xs font-medium`}>
-            {getCategoryLabel(bubble.category)}
-          </span>
+          <div className="flex items-center space-x-2">
+            {/* Title input field */}
+            {isEditingTitle ? (
+              <Input
+                value={localTitle}
+                onChange={(e) => setLocalTitle(e.target.value)}
+                onBlur={handleTitleSave}
+                onKeyDown={handleTitleKeyDown}
+                className={`${colorClasses.bg} ${colorClasses.text} px-2 py-1 h-6 text-xs font-medium border-0 focus:ring-1 focus:ring-current`}
+                style={{ width: Math.max(60, localTitle.length * 8) + 'px' }}
+                autoFocus
+                onMouseDown={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <span 
+                className={`${colorClasses.bg} ${colorClasses.text} px-2 py-1 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity`}
+                onClick={() => setIsEditingTitle(true)}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                {localTitle || "Add keyword..."}
+              </span>
+            )}
+            
+            {/* Category tag */}
+            <span className={`${colorClasses.bg} ${colorClasses.text} px-2 py-1 rounded-full text-xs font-medium`}>
+              {getCategoryLabel(bubble.category)}
+            </span>
+          </div>
           <div className="flex items-center space-x-1" onMouseDown={(e) => e.stopPropagation()}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

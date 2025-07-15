@@ -26,6 +26,7 @@ export const bubbles = pgTable("bubbles", {
   height: integer("height").default(120).notNull(),
   category: text("category").default("general").notNull(),
   color: text("color").default("blue").notNull(),
+  title: text("title").default("").notNull(),
 });
 
 export const articles = pgTable("articles", {
