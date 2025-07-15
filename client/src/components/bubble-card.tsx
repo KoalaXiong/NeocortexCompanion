@@ -79,6 +79,8 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    console.log('Mouse down on bubble', bubble.id);
     setIsDragging(true);
     const rect = cardRef.current?.getBoundingClientRect();
     if (rect) {
@@ -89,33 +91,39 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
     }
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!isDragging) return;
-    const newX = e.clientX - dragOffset.x;
-    const newY = e.clientY - dragOffset.y;
-    setPosition({ x: newX, y: newY });
-  };
-
-  const handleMouseUp = () => {
-    if (isDragging) {
-      setIsDragging(false);
-      const x = Math.round(Math.max(0, position.x));
-      const y = Math.round(Math.max(0, position.y));
-      onMove(bubble.id, x, y);
-    }
-  };
-
   useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      e.preventDefault();
+      const newX = e.clientX - dragOffset.x;
+      const newY = e.clientY - dragOffset.y;
+      console.log('Moving bubble', bubble.id, 'to', newX, newY);
+      setPosition({ x: newX, y: newY });
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      if (isDragging) {
+        e.preventDefault();
+        console.log('Mouse up on bubble', bubble.id, 'at position', position);
+        setIsDragging(false);
+        const x = Math.round(Math.max(0, position.x));
+        const y = Math.round(Math.max(0, position.y));
+        onMove(bubble.id, x, y);
+      }
+    };
+
     if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      console.log('Adding event listeners for bubble', bubble.id);
+      document.addEventListener('mousemove', handleMouseMove, { passive: false });
+      document.addEventListener('mouseup', handleMouseUp, { passive: false });
       
       return () => {
+        console.log('Removing event listeners for bubble', bubble.id);
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isDragging, dragOffset]);
+  }, [isDragging, dragOffset.x, dragOffset.y, position.x, position.y, bubble.id, onMove]);
 
   const formatTime = (date: Date | string) => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -145,7 +153,7 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
           <span className={`${colorClasses.bg} ${colorClasses.text} px-2 py-1 rounded-full text-xs font-medium`}>
             {getCategoryLabel(bubble.category)}
           </span>
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-1" onMouseDown={(e) => e.stopPropagation()}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
