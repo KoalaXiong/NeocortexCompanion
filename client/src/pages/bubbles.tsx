@@ -39,7 +39,34 @@ export default function Bubbles() {
       const response = await apiRequest("PATCH", `/api/bubbles/${bubbleId}`, updates);
       return response.json();
     },
-    onSuccess: () => {
+    onMutate: async ({ bubbleId, x, y, color, category }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["/api/conversations", id, "bubbles"] });
+      
+      // Snapshot the previous value
+      const previousBubbles = queryClient.getQueryData<BubbleWithMessage[]>(["/api/conversations", id, "bubbles"]);
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData<BubbleWithMessage[]>(["/api/conversations", id, "bubbles"], (old) => {
+        if (!old) return old;
+        return old.map(bubble => 
+          bubble.id === bubbleId 
+            ? { ...bubble, x, y, ...(color && { color }), ...(category && { category }) }
+            : bubble
+        );
+      });
+      
+      // Return a context object with the snapshotted value
+      return { previousBubbles };
+    },
+    onError: (err, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousBubbles) {
+        queryClient.setQueryData(["/api/conversations", id, "bubbles"], context.previousBubbles);
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure we have the latest data
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", id, "bubbles"] });
     },
   });
