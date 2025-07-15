@@ -105,6 +105,12 @@ The application uses four main tables:
 
 ### Recent Changes
 
+- **January 15, 2025**: Enhanced bubble color functionality and PDF filename defaulting
+  - Fixed bubble color changes by replacing dynamic Tailwind classes with static color mappings
+  - Added proper color class generation to ensure all CSS classes are included in build
+  - Updated PDF filename to default to conversation name instead of article title
+  - Color changes now persist properly in database and update UI immediately
+
 - **January 15, 2025**: Migrated from memory storage to PostgreSQL database
   - Added database connection with Neon Database serverless PostgreSQL
   - Implemented DatabaseStorage class replacing MemStorage

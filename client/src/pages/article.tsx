@@ -27,6 +27,11 @@ export default function ArticlePage() {
     enabled: !!id,
   });
 
+  const { data: conversation } = useQuery({
+    queryKey: ["/api/conversations", id],
+    enabled: !!id,
+  });
+
   // Save article mutation
   const saveArticleMutation = useMutation({
     mutationFn: async (data: InsertArticle) => {
@@ -61,10 +66,12 @@ export default function ArticlePage() {
   };
 
   const handleDownloadPDF = () => {
+    // Use conversation name as default filename, fallback to article title
+    const defaultFilename = conversation?.name || articleTitle;
     generatePDF({
       title: articleTitle,
       content: articleContent,
-      filename: `${articleTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`
+      filename: `${defaultFilename.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`
     });
     setShowPDFPreview(false);
   };
