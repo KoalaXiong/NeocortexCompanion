@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLocation, useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ export default function ArticlePage() {
   const { conversationId } = useParams();
   const id = conversationId ? parseInt(conversationId) : null;
   const [, setLocation] = useLocation();
-  const [articleTitle, setArticleTitle] = useState("The Future of Human-AI Collaboration");
+  const [articleTitle, setArticleTitle] = useState("");
   const [articleContent, setArticleContent] = useState("");
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [usedBubbles, setUsedBubbles] = useState<number[]>([]);
@@ -31,6 +31,13 @@ export default function ArticlePage() {
     queryKey: ["/api/conversations", id],
     enabled: !!id,
   });
+
+  // Set article title to conversation name when conversation loads
+  useEffect(() => {
+    if (conversation?.name && !articleTitle) {
+      setArticleTitle(conversation.name);
+    }
+  }, [conversation?.name, articleTitle]);
 
   // Save article mutation
   const saveArticleMutation = useMutation({
@@ -204,7 +211,7 @@ export default function ArticlePage() {
               value={articleTitle}
               onChange={(e) => setArticleTitle(e.target.value)}
               className="w-full text-3xl font-bold border-none outline-none mb-8 placeholder-gray-400"
-              placeholder="Article Title"
+              placeholder={conversation?.name || "Article Title"}
             />
 
             {/* Editor Content */}
