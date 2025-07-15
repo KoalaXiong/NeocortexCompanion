@@ -14,14 +14,17 @@ interface BubbleCardProps {
 
 export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryChange }: BubbleCardProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [position, setPosition] = useState({ x: bubble.x, y: bubble.y });
+  const [dragPosition, setDragPosition] = useState({ x: bubble.x, y: bubble.y });
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
-
-  // Update position when bubble data changes (e.g., from server)
+  
+  // Use drag position while dragging, bubble position otherwise
+  const position = isDragging ? dragPosition : { x: bubble.x, y: bubble.y };
+  
+  // Update drag position when not dragging
   useEffect(() => {
     if (!isDragging) {
-      setPosition({ x: bubble.x, y: bubble.y });
+      setDragPosition({ x: bubble.x, y: bubble.y });
     }
   }, [bubble.x, bubble.y, isDragging]);
 
@@ -81,31 +84,29 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsDragging(true);
-    const rect = cardRef.current?.getBoundingClientRect();
-    if (rect) {
-      setDragOffset({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
-      });
-    }
+    setDragOffset({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    });
   };
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
       e.preventDefault();
-      const newX = e.clientX - dragOffset.x;
-      const newY = e.clientY - dragOffset.y;
-      setPosition({ x: newX, y: newY });
+      const newX = Math.max(0, e.clientX - dragOffset.x);
+      const newY = Math.max(0, e.clientY - dragOffset.y);
+      setDragPosition({ x: newX, y: newY });
     };
 
     const handleMouseUp = (e: MouseEvent) => {
       if (isDragging) {
         e.preventDefault();
         setIsDragging(false);
-        const x = Math.round(Math.max(0, position.x));
-        const y = Math.round(Math.max(0, position.y));
-        onMove(bubble.id, x, y);
+        // Save to database only when dropping
+        const newX = Math.max(0, e.clientX - dragOffset.x);
+        const newY = Math.max(0, e.clientY - dragOffset.y);
+        onMove(bubble.id, Math.round(newX), Math.round(newY));
       }
     };
 
@@ -118,7 +119,7 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isDragging, dragOffset.x, dragOffset.y]);
+  }, [isDragging, dragOffset.x, dragOffset.y, bubble.id, onMove]);
 
   const formatTime = (date: Date | string) => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
