@@ -18,6 +18,37 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
 
+  const getColorClasses = (color: string) => {
+    const colorClassMap = {
+      "blue": {
+        bg: "bg-blue-100",
+        text: "text-blue-700",
+        border: "border-blue-200"
+      },
+      "green": {
+        bg: "bg-green-100", 
+        text: "text-green-700",
+        border: "border-green-200"
+      },
+      "purple": {
+        bg: "bg-purple-100",
+        text: "text-purple-700", 
+        border: "border-purple-200"
+      },
+      "orange": {
+        bg: "bg-orange-100",
+        text: "text-orange-700",
+        border: "border-orange-200"
+      },
+      "red": {
+        bg: "bg-red-100",
+        text: "text-red-700",
+        border: "border-red-200"
+      }
+    };
+    return colorClassMap[color as keyof typeof colorClassMap] || colorClassMap.blue;
+  };
+
   const getCategoryColor = (category: string) => {
     const colorMap = {
       "core-insight": "blue",
@@ -88,11 +119,12 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
 
   const wordCount = bubble.message.text.split(' ').length;
   const color = bubble.color || getCategoryColor(bubble.category);
+  const colorClasses = getColorClasses(color);
 
   return (
     <Card
       ref={cardRef}
-      className={`absolute cursor-move hover:shadow-xl transition-all duration-200 transform hover:scale-105 border-2 border-${color}-200 ${
+      className={`absolute cursor-move hover:shadow-xl transition-all duration-200 transform hover:scale-105 border-2 ${colorClasses.border} ${
         isDragging ? 'scale-105 shadow-2xl z-50' : ''
       }`}
       style={{
@@ -106,7 +138,7 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
     >
       <div className="p-4">
         <div className="flex items-start justify-between mb-2">
-          <span className={`bg-${color}-100 text-${color}-700 px-2 py-1 rounded-full text-xs font-medium`}>
+          <span className={`${colorClasses.bg} ${colorClasses.text} px-2 py-1 rounded-full text-xs font-medium`}>
             {getCategoryLabel(bubble.category)}
           </span>
           <div className="flex items-center space-x-1">
