@@ -101,4 +101,13 @@ The application uses four main tables:
 2. **Drizzle ORM**: Chosen for type-safe database operations and excellent TypeScript integration
 3. **Shadcn/ui**: Provides consistent, accessible UI components with customizable theming
 4. **Client-side PDF Generation**: jsPDF allows offline PDF creation without server dependencies
-5. **Memory Storage Fallback**: Includes in-memory storage implementation for development/testing scenarios
+5. **PostgreSQL Database**: Migrated from memory storage to persistent PostgreSQL database with Neon Database
+
+### Recent Changes
+
+- **January 15, 2025**: Migrated from memory storage to PostgreSQL database
+  - Added database connection with Neon Database serverless PostgreSQL
+  - Implemented DatabaseStorage class replacing MemStorage
+  - Added proper database relations using Drizzle ORM
+  - Created database tables: conversations, messages, bubbles, articles
+  - All data is now persisted across application restarts

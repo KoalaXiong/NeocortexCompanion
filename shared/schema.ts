@@ -1,5 +1,6 @@
 import { pgTable, text, serial, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { relations } from "drizzle-orm";
 import { z } from "zod";
 
 export const conversations = pgTable("conversations", {
@@ -80,3 +81,23 @@ export type MessageWithBubble = Message & {
 export type BubbleWithMessage = Bubble & {
   message: Message;
 };
+
+// Relations
+export const conversationsRelations = relations(conversations, ({ many }) => ({
+  messages: many(messages),
+}));
+
+export const messagesRelations = relations(messages, ({ one, many }) => ({
+  conversation: one(conversations, {
+    fields: [messages.conversationId],
+    references: [conversations.id],
+  }),
+  bubbles: many(bubbles),
+}));
+
+export const bubblesRelations = relations(bubbles, ({ one }) => ({
+  message: one(messages, {
+    fields: [bubbles.messageId],
+    references: [messages.id],
+  }),
+}));
