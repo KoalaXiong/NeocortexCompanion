@@ -84,6 +84,40 @@ export default function ArticlePage() {
     },
   });
 
+  // Helper functions - defined before they're used
+  const getColorClasses = (color: string) => {
+    const colorClassMap = {
+      "blue": { bg: "bg-blue-100", text: "text-blue-700" },
+      "green": { bg: "bg-green-100", text: "text-green-700" },
+      "purple": { bg: "bg-purple-100", text: "text-purple-700" },
+      "orange": { bg: "bg-orange-100", text: "text-orange-700" },
+      "red": { bg: "bg-red-100", text: "text-red-700" }
+    };
+    return colorClassMap[color as keyof typeof colorClassMap] || colorClassMap.blue;
+  };
+
+  const getCategoryColor = (category: string) => {
+    const colorMap = {
+      "core-insight": "blue",
+      "supporting-evidence": "green", 
+      "personal-reflection": "purple",
+      "action-items": "orange",
+      "key-question": "red"
+    };
+    return colorMap[category as keyof typeof colorMap] || "blue";
+  };
+
+  const getCategoryLabel = (category: string) => {
+    const labelMap = {
+      "core-insight": "Core Insight",
+      "supporting-evidence": "Supporting Evidence",
+      "personal-reflection": "Personal Reflection", 
+      "action-items": "Action Items",
+      "key-question": "Key Question"
+    };
+    return labelMap[category as keyof typeof labelMap] || "General";
+  };
+
   const availableBubbles = bubbles.filter(bubble => !usedBubbles.includes(bubble.id));
   
   // Sort bubbles based on current sort mode
@@ -129,39 +163,6 @@ export default function ArticlePage() {
       filename: `${defaultFilename.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`
     });
     setShowPDFPreview(false);
-  };
-
-  const getColorClasses = (color: string) => {
-    const colorClassMap = {
-      "blue": { bg: "bg-blue-100", text: "text-blue-700" },
-      "green": { bg: "bg-green-100", text: "text-green-700" },
-      "purple": { bg: "bg-purple-100", text: "text-purple-700" },
-      "orange": { bg: "bg-orange-100", text: "text-orange-700" },
-      "red": { bg: "bg-red-100", text: "text-red-700" }
-    };
-    return colorClassMap[color as keyof typeof colorClassMap] || colorClassMap.blue;
-  };
-
-  const getCategoryColor = (category: string) => {
-    const colorMap = {
-      "core-insight": "blue",
-      "supporting-evidence": "green", 
-      "personal-reflection": "purple",
-      "action-items": "orange",
-      "key-question": "red"
-    };
-    return colorMap[category as keyof typeof colorMap] || "blue";
-  };
-
-  const getCategoryLabel = (category: string) => {
-    const labelMap = {
-      "core-insight": "Core Insight",
-      "supporting-evidence": "Supporting Evidence",
-      "personal-reflection": "Personal Reflection", 
-      "action-items": "Action Items",
-      "key-question": "Key Question"
-    };
-    return labelMap[category as keyof typeof labelMap] || "General";
   };
 
   if (isLoading) {
