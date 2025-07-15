@@ -11,8 +11,14 @@ interface PDFPreviewModalProps {
 }
 
 export default function PDFPreviewModal({ isOpen, onClose, onDownload, title, content }: PDFPreviewModalProps) {
-  const formatContent = (text: string) => {
-    return text.split('\n').map((paragraph, index) => (
+  const formatContent = (htmlContent: string) => {
+    // If content contains HTML, render it directly
+    if (htmlContent.includes('<')) {
+      return <div dangerouslySetInnerHTML={{ __html: htmlContent }} className="space-y-4" />;
+    }
+    
+    // Otherwise, treat as plain text and split by lines
+    return htmlContent.split('\n').map((paragraph, index) => (
       <p key={index} className="mb-4 leading-relaxed">
         {paragraph}
       </p>

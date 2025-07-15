@@ -19,6 +19,7 @@ export default function ArticlePage() {
   const [articleContent, setArticleContent] = useState("");
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [usedBubbles, setUsedBubbles] = useState<number[]>([]);
+  const [currentArticleId, setCurrentArticleId] = useState<number | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
@@ -32,6 +33,12 @@ export default function ArticlePage() {
     enabled: !!id,
   });
 
+  // Query for existing articles for this conversation
+  const { data: existingArticles = [] } = useQuery<Article[]>({
+    queryKey: ["/api/articles"],
+    enabled: !!id,
+  });
+
   // Set article title to conversation name when conversation loads
   useEffect(() => {
     if (conversation?.name && !articleTitle) {
@@ -39,11 +46,36 @@ export default function ArticlePage() {
     }
   }, [conversation?.name, articleTitle]);
 
-  // Save article mutation
+  // Load existing article draft if available
+  useEffect(() => {
+    if (existingArticles.length > 0 && !articleContent) {
+      const latestArticle = existingArticles
+        .filter(article => article.title.includes(conversation?.name || ''))
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
+      
+      if (latestArticle) {
+        setArticleTitle(latestArticle.title);
+        setArticleContent(latestArticle.content);
+        setUsedBubbles(latestArticle.bubbleIds);
+        setCurrentArticleId(latestArticle.id);
+      }
+    }
+  }, [existingArticles, articleContent, conversation?.name]);
+
+  // Save article mutation - update if exists, create if new
   const saveArticleMutation = useMutation({
     mutationFn: async (data: InsertArticle) => {
-      const response = await apiRequest("POST", "/api/articles", data);
-      return response.json();
+      if (currentArticleId) {
+        // Update existing article
+        const response = await apiRequest("PATCH", `/api/articles/${currentArticleId}`, data);
+        return response.json();
+      } else {
+        // Create new article
+        const response = await apiRequest("POST", "/api/articles", data);
+        const newArticle = await response.json();
+        setCurrentArticleId(newArticle.id);
+        return newArticle;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/articles"] });
@@ -56,7 +88,7 @@ export default function ArticlePage() {
   const handleBubbleDrop = (bubbleId: number, bubbleText: string) => {
     setUsedBubbles(prev => [...prev, bubbleId]);
     
-    const newParagraph = `\n\n${bubbleText}\n\n`;
+    const newParagraph = `<p class="mb-4">${bubbleText}</p>`;
     setArticleContent(prev => prev + newParagraph);
   };
 
@@ -259,10 +291,11 @@ export default function ArticlePage() {
                 className="min-h-[400px] space-y-6"
                 contentEditable
                 suppressContentEditableWarning
-                onBlur={(e) => setArticleContent(e.currentTarget.textContent || "")}
+                onInput={(e) => setArticleContent(e.currentTarget.innerHTML)}
+                onBlur={(e) => setArticleContent(e.currentTarget.innerHTML)}
               >
                 {articleContent ? (
-                  <div dangerouslySetInnerHTML={{ __html: articleContent.replace(/\n/g, '<br />') }} />
+                  <div dangerouslySetInnerHTML={{ __html: articleContent }} />
                 ) : (
                   <div className="text-gray-500 italic">
                     Start writing your article or drag bubbles from the sidebar...

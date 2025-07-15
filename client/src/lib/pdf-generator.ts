@@ -21,12 +21,21 @@ export function generatePDF({ title, content, filename = 'article.pdf' }: PDFOpt
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
   
+  // Clean HTML content and convert to plain text with proper formatting
+  const cleanContent = (content || 'Your article content will appear here...')
+    .replace(/<p[^>]*>/g, '\n\n')  // Convert <p> tags to paragraph breaks
+    .replace(/<\/p>/g, '')         // Remove closing </p> tags
+    .replace(/<br\s*\/?>/g, '\n')  // Convert <br> tags to line breaks
+    .replace(/<[^>]*>/g, '')       // Remove all other HTML tags
+    .replace(/\n\s*\n\s*\n/g, '\n\n') // Clean up multiple line breaks
+    .trim();
+
   // Split content into lines that fit the page width
   const pageWidth = doc.internal.pageSize.width;
   const margin = 20;
   const maxLineWidth = pageWidth - (margin * 2);
   
-  const lines = doc.splitTextToSize(content || 'Your article content will appear here...', maxLineWidth);
+  const lines = doc.splitTextToSize(cleanContent, maxLineWidth);
   
   let yPosition = 50;
   const lineHeight = 7;
