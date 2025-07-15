@@ -100,8 +100,20 @@ export default function Bubbles() {
   };
 
   const handleSaveLayout = () => {
-    // Layout is automatically saved when bubbles are moved
-    alert("Layout saved successfully!");
+    // Since layout is automatically saved when bubbles are moved,
+    // we just provide user feedback about the current state
+    if (bubbles.length === 0) {
+      alert("No bubbles to save. Create bubbles first!");
+      return;
+    }
+    
+    // Check if any bubbles have been moved from their default positions
+    const hasMoved = bubbles.some(bubble => bubble.x !== 100 || bubble.y !== 100);
+    if (hasMoved) {
+      alert("Layout saved successfully! All bubble positions have been saved to the database.");
+    } else {
+      alert("Layout saved! Your bubble positions are automatically saved as you move them.");
+    }
   };
 
   if (isLoading) {

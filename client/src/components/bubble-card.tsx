@@ -18,6 +18,13 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
 
+  // Update position when bubble data changes (e.g., from server)
+  useEffect(() => {
+    if (!isDragging) {
+      setPosition({ x: bubble.x, y: bubble.y });
+    }
+  }, [bubble.x, bubble.y, isDragging]);
+
   const getColorClasses = (color: string) => {
     const colorClassMap = {
       "blue": {
