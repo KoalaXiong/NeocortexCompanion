@@ -83,6 +83,17 @@ export default function ArticlePage() {
     setShowPDFPreview(false);
   };
 
+  const getColorClasses = (color: string) => {
+    const colorClassMap = {
+      "blue": { bg: "bg-blue-100", text: "text-blue-700" },
+      "green": { bg: "bg-green-100", text: "text-green-700" },
+      "purple": { bg: "bg-purple-100", text: "text-purple-700" },
+      "orange": { bg: "bg-orange-100", text: "text-orange-700" },
+      "red": { bg: "bg-red-100", text: "text-red-700" }
+    };
+    return colorClassMap[color as keyof typeof colorClassMap] || colorClassMap.blue;
+  };
+
   const getCategoryColor = (category: string) => {
     const colorMap = {
       "core-insight": "blue",
@@ -178,17 +189,17 @@ export default function ArticlePage() {
                 {availableBubbles.map((bubble) => (
                   <div
                     key={bubble.id}
-                    className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 cursor-grab hover:shadow-md transition-all duration-200"
+                    className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 cursor-grab hover:shadow-md transition-all duration-200 active:cursor-grabbing"
                     draggable
-                    onDragEnd={(e) => {
-                      const dropArea = document.elementFromPoint(e.clientX, e.clientY);
-                      if (dropArea?.classList.contains('drop-zone')) {
-                        handleBubbleDrop(bubble.id, bubble.message.text);
-                      }
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("text/plain", JSON.stringify({
+                        id: bubble.id,
+                        text: bubble.message.text
+                      }));
                     }}
                   >
                     <div className="flex items-start justify-between mb-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium bg-${getCategoryColor(bubble.category)}-100 text-${getCategoryColor(bubble.category)}-700`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getColorClasses(getCategoryColor(bubble.category)).bg} ${getColorClasses(getCategoryColor(bubble.category)).text}`}>
                         {getCategoryLabel(bubble.category)}
                       </span>
                       <div className="text-gray-400">⋮⋮</div>
@@ -218,7 +229,26 @@ export default function ArticlePage() {
             <div className="prose prose-lg max-w-none">
               
               {/* Drop Zone Indicator */}
-              <div className="drop-zone border-2 border-dashed border-gray-300 rounded-lg p-6 mb-6 text-center text-gray-500 hover:border-primary hover:text-primary transition-colors">
+              <div 
+                className="drop-zone border-2 border-dashed border-gray-300 rounded-lg p-6 mb-6 text-center text-gray-500 hover:border-primary hover:text-primary transition-colors"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.add('border-primary', 'text-primary');
+                }}
+                onDragLeave={(e) => {
+                  e.currentTarget.classList.remove('border-primary', 'text-primary');
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.remove('border-primary', 'text-primary');
+                  
+                  const data = e.dataTransfer.getData("text/plain");
+                  if (data) {
+                    const bubble = JSON.parse(data);
+                    handleBubbleDrop(bubble.id, bubble.text);
+                  }
+                }}
+              >
                 <div className="text-2xl mb-2">+</div>
                 <p>Drag bubbles here to build your article</p>
               </div>
@@ -241,7 +271,26 @@ export default function ArticlePage() {
               </div>
 
               {/* Additional Drop Zone */}
-              <div className="drop-zone border-2 border-dashed border-gray-200 rounded-lg p-4 text-center text-gray-400 hover:border-primary-400 transition-colors mt-8">
+              <div 
+                className="drop-zone border-2 border-dashed border-gray-200 rounded-lg p-4 text-center text-gray-400 hover:border-primary transition-colors mt-8"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.add('border-primary', 'text-primary');
+                }}
+                onDragLeave={(e) => {
+                  e.currentTarget.classList.remove('border-primary', 'text-primary');
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.remove('border-primary', 'text-primary');
+                  
+                  const data = e.dataTransfer.getData("text/plain");
+                  if (data) {
+                    const bubble = JSON.parse(data);
+                    handleBubbleDrop(bubble.id, bubble.text);
+                  }
+                }}
+              >
                 <div className="text-lg mb-1">+</div>
                 <p className="text-sm">Drop content here</p>
               </div>
