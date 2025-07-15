@@ -20,6 +20,7 @@ export default function ArticlePage() {
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [usedBubbles, setUsedBubbles] = useState<number[]>([]);
   const [currentArticleId, setCurrentArticleId] = useState<number | null>(null);
+  const [sortMode, setSortMode] = useState<'original' | 'keyword' | 'tag'>('original');
   const editorRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
@@ -84,6 +85,21 @@ export default function ArticlePage() {
   });
 
   const availableBubbles = bubbles.filter(bubble => !usedBubbles.includes(bubble.id));
+  
+  // Sort bubbles based on current sort mode
+  const sortedAvailableBubbles = [...availableBubbles].sort((a, b) => {
+    switch (sortMode) {
+      case 'keyword':
+        const titleA = a.title || '';
+        const titleB = b.title || '';
+        return titleA.localeCompare(titleB);
+      case 'tag':
+        return getCategoryLabel(a.category).localeCompare(getCategoryLabel(b.category));
+      case 'original':
+      default:
+        return a.id - b.id; // Sort by ID (creation order)
+    }
+  });
 
   const handleBubbleDrop = (bubbleId: number, bubbleText: string) => {
     setUsedBubbles(prev => [...prev, bubbleId]);
@@ -205,6 +221,34 @@ export default function ArticlePage() {
           <div className="p-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Available Bubbles</h3>
             
+            {/* Sorting Controls */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              <Button
+                variant={sortMode === 'keyword' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSortMode('keyword')}
+                className="text-xs"
+              >
+                Sort by Keyword
+              </Button>
+              <Button
+                variant={sortMode === 'tag' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSortMode('tag')}
+                className="text-xs"
+              >
+                Sort by Tag
+              </Button>
+              <Button
+                variant={sortMode === 'original' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSortMode('original')}
+                className="text-xs"
+              >
+                Reset List
+              </Button>
+            </div>
+            
             {availableBubbles.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-500 mb-4">All bubbles have been used.</p>
@@ -218,7 +262,7 @@ export default function ArticlePage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {availableBubbles.map((bubble) => (
+                {sortedAvailableBubbles.map((bubble) => (
                   <div
                     key={bubble.id}
                     className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 cursor-grab hover:shadow-md transition-all duration-200 active:cursor-grabbing"
