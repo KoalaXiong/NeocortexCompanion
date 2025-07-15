@@ -14,17 +14,14 @@ interface BubbleCardProps {
 
 export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryChange }: BubbleCardProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [dragPosition, setDragPosition] = useState({ x: bubble.x, y: bubble.y });
+  const [position, setPosition] = useState({ x: bubble.x, y: bubble.y });
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
   
-  // Use drag position while dragging, bubble position otherwise
-  const position = isDragging ? dragPosition : { x: bubble.x, y: bubble.y };
-  
-  // Update drag position when not dragging
+  // Update position only when bubble data changes and we're not dragging
   useEffect(() => {
     if (!isDragging) {
-      setDragPosition({ x: bubble.x, y: bubble.y });
+      setPosition({ x: bubble.x, y: bubble.y });
     }
   }, [bubble.x, bubble.y, isDragging]);
 
@@ -96,17 +93,23 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
       e.preventDefault();
       const newX = Math.max(0, e.clientX - dragOffset.x);
       const newY = Math.max(0, e.clientY - dragOffset.y);
-      setDragPosition({ x: newX, y: newY });
+      setPosition({ x: newX, y: newY });
     };
 
     const handleMouseUp = (e: MouseEvent) => {
       if (isDragging) {
         e.preventDefault();
-        setIsDragging(false);
-        // Save to database only when dropping
         const newX = Math.max(0, e.clientX - dragOffset.x);
         const newY = Math.max(0, e.clientY - dragOffset.y);
-        onMove(bubble.id, Math.round(newX), Math.round(newY));
+        const finalX = Math.round(newX);
+        const finalY = Math.round(newY);
+        
+        // Update local position immediately to prevent snap-back
+        setPosition({ x: finalX, y: finalY });
+        setIsDragging(false);
+        
+        // Save to database
+        onMove(bubble.id, finalX, finalY);
       }
     };
 
