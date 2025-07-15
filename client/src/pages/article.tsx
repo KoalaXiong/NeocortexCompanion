@@ -270,30 +270,7 @@ export default function ArticlePage() {
                 )}
               </div>
 
-              {/* Additional Drop Zone */}
-              <div 
-                className="drop-zone border-2 border-dashed border-gray-200 rounded-lg p-4 text-center text-gray-400 hover:border-primary transition-colors mt-8"
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.currentTarget.classList.add('border-primary', 'text-primary');
-                }}
-                onDragLeave={(e) => {
-                  e.currentTarget.classList.remove('border-primary', 'text-primary');
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.currentTarget.classList.remove('border-primary', 'text-primary');
-                  
-                  const data = e.dataTransfer.getData("text/plain");
-                  if (data) {
-                    const bubble = JSON.parse(data);
-                    handleBubbleDrop(bubble.id, bubble.text);
-                  }
-                }}
-              >
-                <div className="text-lg mb-1">+</div>
-                <p className="text-sm">Drop content here</p>
-              </div>
+
             </div>
           </div>
         </div>
