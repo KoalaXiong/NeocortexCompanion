@@ -231,9 +231,18 @@ export default function ArticlePage() {
                     }}
                   >
                     <div className="flex items-start justify-between mb-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getColorClasses(getCategoryColor(bubble.category)).bg} ${getColorClasses(getCategoryColor(bubble.category)).text}`}>
-                        {getCategoryLabel(bubble.category)}
-                      </span>
+                      <div className="flex items-center space-x-2">
+                        {/* Keyword/Title */}
+                        {bubble.title && (
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getColorClasses(getCategoryColor(bubble.category)).bg} ${getColorClasses(getCategoryColor(bubble.category)).text}`}>
+                            {bubble.title}
+                          </span>
+                        )}
+                        {/* Category tag */}
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getColorClasses(getCategoryColor(bubble.category)).bg} ${getColorClasses(getCategoryColor(bubble.category)).text}`}>
+                          {getCategoryLabel(bubble.category)}
+                        </span>
+                      </div>
                       <div className="text-gray-400">⋮⋮</div>
                     </div>
                     <p className="text-gray-800 text-sm leading-relaxed">
