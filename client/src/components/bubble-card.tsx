@@ -73,7 +73,7 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
       "action-items": "orange",
       "key-question": "red"
     };
-    return colorMap[category as keyof typeof colorMap] || "blue";
+    return colorMap[category as keyof typeof colorMap] || "";
   };
 
   const getCategoryLabel = (category: string) => {
@@ -154,7 +154,7 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
   };
 
   const wordCount = bubble.message.text.split(' ').length;
-  const color = bubble.color || getCategoryColor(bubble.category);
+  const color = bubble.color || getCategoryColor(bubble.category) || "blue";
   const colorClasses = getColorClasses(color);
 
   return (
