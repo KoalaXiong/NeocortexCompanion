@@ -86,7 +86,11 @@ export default function MessageBubble({
                 onBlur={handleKeywordSubmit}
                 onKeyDown={handleKeyPress}
                 placeholder="Add keyword..."
-                className="h-6 text-xs px-2"
+                className={`h-6 text-xs px-2 ${
+                  isUser 
+                    ? 'bg-white text-black border-white/30' 
+                    : 'bg-white text-black border-gray-300'
+                }`}
                 autoFocus
               />
             ) : hasKeyword ? (
