@@ -118,25 +118,46 @@ export default function Bubbles() {
       return;
     }
 
-    // Delete all existing bubbles using Promise.all
-    const deletePromises = bubbles.map(bubble => 
-      new Promise((resolve) => {
-        deleteBubbleMutation.mutate(bubble.id, {
-          onSuccess: () => resolve(true),
-          onError: () => resolve(false)
-        });
-      })
-    );
-
-    // Wait for all deletions to complete, then create new bubbles
-    await Promise.all(deletePromises);
+    // Store current bubbles list since it will change during deletion
+    const bubblesToDelete = [...bubbles];
     
-    // Small delay to ensure UI updates, then create new bubbles
-    setTimeout(() => {
+    // Delete all existing bubbles one by one with proper callback chain
+    let deletedCount = 0;
+    
+    const deleteAndCreate = () => {
+      if (deletedCount < bubblesToDelete.length) {
+        const bubble = bubblesToDelete[deletedCount];
+        deleteBubbleMutation.mutate(bubble.id, {
+          onSuccess: () => {
+            deletedCount++;
+            if (deletedCount === bubblesToDelete.length) {
+              // All deletions complete, now create new bubbles
+              console.log("All bubbles deleted, creating new ones...");
+              createNewBubbles();
+            } else {
+              // Delete next bubble
+              deleteAndCreate();
+            }
+          },
+          onError: (error) => {
+            console.error("Failed to delete bubble:", error);
+            deletedCount++;
+            if (deletedCount === bubblesToDelete.length) {
+              createNewBubbles();
+            } else {
+              deleteAndCreate();
+            }
+          }
+        });
+      }
+    };
+
+    const createNewBubbles = () => {
       const categories = ["core-insight", "supporting-evidence", "personal-reflection", "action-items", "key-question"];
       const colors = ["blue", "green", "purple", "orange", "red"];
 
       messages.forEach((message, index) => {
+        console.log(`Creating bubble for message ${message.id} with title: ${message.title}`);
         createBubbleMutation.mutate({
           messageId: message.id,
           x: 100 + (index % 3) * 350,
@@ -148,7 +169,9 @@ export default function Bubbles() {
           title: message.title || "", // Inherit keyword from message
         });
       });
-    }, 300);
+    };
+
+    deleteAndCreate();
   };
 
   const handleBubbleColorChange = (bubbleId: number, newColor: string) => {
