@@ -88,24 +88,64 @@ export default function Bubbles() {
     enabled: !!id,
   });
 
-  // Create bubbles for messages that don't have them
+  // Create bubbles for messages that don't have them with smart layout
   const handleCreateBubbles = () => {
     const colors = ["blue", "green", "purple", "orange", "red"];
+    const bubbleWidth = 280;
+    const bubbleHeight = 120;
+    const gapX = 20; // Minimal horizontal gap
+    const gapY = 20; // Minimal vertical gap
+    const startX = 20; // Start from edge of visible area
+    const startY = 20; // Start from top edge
+    const columnsPerRow = Math.floor((window.innerWidth - 40) / (bubbleWidth + gapX)); // Calculate how many fit per row
 
-    messages.forEach((message, index) => {
-      const existingBubble = bubbles.find(b => b.messageId === message.id);
-      if (!existingBubble) {
+    // Get messages that don't have bubbles and organize them
+    const messagesToCreate = messages.filter(message => 
+      !bubbles.find(b => b.messageId === message.id)
+    );
+
+    // Group messages by keyword, then by conversation order
+    const groupedMessages = messagesToCreate.reduce((groups: { [key: string]: typeof messagesToCreate }, message) => {
+      const keyword = message.title || "_no_keyword";
+      if (!groups[keyword]) groups[keyword] = [];
+      groups[keyword].push(message);
+      return groups;
+    }, {});
+
+    // Sort groups: keyword groups first, then no-keyword group
+    const sortedGroups = Object.entries(groupedMessages).sort(([keyA], [keyB]) => {
+      if (keyA === "_no_keyword") return 1;
+      if (keyB === "_no_keyword") return -1;
+      return keyA.localeCompare(keyB);
+    });
+
+    // Calculate positions for all bubbles
+    let currentX = startX;
+    let currentY = startY;
+    let bubbleIndex = 0;
+
+    sortedGroups.forEach(([keyword, groupMessages]) => {
+      groupMessages.forEach((message) => {
+        // If we exceed the row width, move to next row
+        if (currentX + bubbleWidth > window.innerWidth - 20) {
+          currentX = startX;
+          currentY += bubbleHeight + gapY;
+        }
+
         createBubbleMutation.mutate({
           messageId: message.id,
-          x: 100 + (index % 3) * 350,
-          y: 100 + Math.floor(index / 3) * 200,
-          width: 280,
-          height: 120,
+          x: currentX,
+          y: currentY,
+          width: bubbleWidth,
+          height: bubbleHeight,
           category: "", // No default category - let user add manually
-          color: colors[index % colors.length],
+          color: colors[bubbleIndex % colors.length],
           title: message.title || "", // Inherit keyword from message
         });
-      }
+
+        currentX += bubbleWidth + gapX;
+        bubbleIndex++;
+      });
     });
   };
 
@@ -153,18 +193,57 @@ export default function Bubbles() {
 
     const createNewBubbles = () => {
       const colors = ["blue", "green", "purple", "orange", "red"];
+      const bubbleWidth = 280;
+      const bubbleHeight = 120;
+      const gapX = 20; // Minimal horizontal gap
+      const gapY = 20; // Minimal vertical gap
+      const startX = 20; // Start from edge of visible area
+      const startY = 20; // Start from top edge
+      const columnsPerRow = Math.floor((window.innerWidth - 40) / (bubbleWidth + gapX)); // Calculate how many fit per row
 
-      messages.forEach((message, index) => {
-        console.log(`Creating bubble for message ${message.id} with title: ${message.title}`);
-        createBubbleMutation.mutate({
-          messageId: message.id,
-          x: 100 + (index % 3) * 350,
-          y: 100 + Math.floor(index / 3) * 200,
-          width: 280,
-          height: 120,
-          category: "", // No default category - let user add manually
-          color: colors[index % colors.length],
-          title: message.title || "", // Inherit keyword from message
+      // Group messages by keyword, then by conversation order
+      const groupedMessages = messages.reduce((groups: { [key: string]: typeof messages }, message) => {
+        const keyword = message.title || "_no_keyword";
+        if (!groups[keyword]) groups[keyword] = [];
+        groups[keyword].push(message);
+        return groups;
+      }, {});
+
+      // Sort groups: keyword groups first, then no-keyword group
+      const sortedGroups = Object.entries(groupedMessages).sort(([keyA], [keyB]) => {
+        if (keyA === "_no_keyword") return 1;
+        if (keyB === "_no_keyword") return -1;
+        return keyA.localeCompare(keyB);
+      });
+
+      // Calculate positions for all bubbles
+      let currentX = startX;
+      let currentY = startY;
+      let bubbleIndex = 0;
+
+      sortedGroups.forEach(([keyword, groupMessages]) => {
+        groupMessages.forEach((message) => {
+          console.log(`Creating bubble for message ${message.id} with title: ${message.title}`);
+          
+          // If we exceed the row width, move to next row
+          if (currentX + bubbleWidth > window.innerWidth - 20) {
+            currentX = startX;
+            currentY += bubbleHeight + gapY;
+          }
+
+          createBubbleMutation.mutate({
+            messageId: message.id,
+            x: currentX,
+            y: currentY,
+            width: bubbleWidth,
+            height: bubbleHeight,
+            category: "", // No default category - let user add manually
+            color: colors[bubbleIndex % colors.length],
+            title: message.title || "", // Inherit keyword from message
+          });
+
+          currentX += bubbleWidth + gapX;
+          bubbleIndex++;
         });
       });
     };
