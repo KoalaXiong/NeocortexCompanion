@@ -26,8 +26,8 @@ export default function Chat() {
   const [newConversationTitle, setNewConversationTitle] = useState("");
   const [targetConversationId, setTargetConversationId] = useState<string>("");
   const [removeFromOriginal, setRemoveFromOriginal] = useState(false);
-  const [isUpdatingKeywords, setIsUpdatingKeywords] = useState(false);
-  const [savedScrollPosition, setSavedScrollPosition] = useState<number | null>(null);
+  const preventAutoScroll = useRef(false);
+  const savedScrollPosition = useRef<number>(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -89,16 +89,20 @@ export default function Chat() {
   });
 
   useEffect(() => {
-    if (isUpdatingKeywords && savedScrollPosition !== null && messagesContainerRef.current) {
-      // Restore scroll position after keyword update
-      messagesContainerRef.current.scrollTop = savedScrollPosition;
-      setSavedScrollPosition(null);
-      setIsUpdatingKeywords(false);
-    } else if (!isUpdatingKeywords && messages.length > 0) {
-      // Only auto-scroll to bottom for new messages
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (preventAutoScroll.current && messagesContainerRef.current) {
+      // Restore saved scroll position without animation
+      const container = messagesContainerRef.current;
+      container.scrollTop = savedScrollPosition.current;
+      preventAutoScroll.current = false;
+    } else if (!preventAutoScroll.current && messages.length > 0) {
+      // Auto-scroll to bottom for new messages
+      setTimeout(() => {
+        if (!preventAutoScroll.current) {
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 50);
     }
-  }, [messages, isUpdatingKeywords, savedScrollPosition]);
+  }, [messages]);
 
   // Selection handlers
   const handleSelectionChange = (messageId: number, selected: boolean) => {
@@ -140,19 +144,18 @@ export default function Chat() {
 
   const updateMessageTitle = async (messageId: number, title: string) => {
     try {
-      // Save current scroll position before updating
+      // Save current scroll position and set flag to prevent auto-scroll
       if (messagesContainerRef.current) {
-        setSavedScrollPosition(messagesContainerRef.current.scrollTop);
+        savedScrollPosition.current = messagesContainerRef.current.scrollTop;
+        preventAutoScroll.current = true;
       }
-      setIsUpdatingKeywords(true);
       
       await apiRequest("PATCH", `/api/messages/${messageId}`, { title });
       // Refresh messages to show the updated title
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
     } catch (error) {
       console.error("Error updating message title:", error);
-      setIsUpdatingKeywords(false);
-      setSavedScrollPosition(null);
+      preventAutoScroll.current = false;
     }
   };
 
