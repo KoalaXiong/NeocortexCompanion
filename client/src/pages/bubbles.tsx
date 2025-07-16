@@ -94,6 +94,7 @@ export default function Bubbles() {
           height: 120,
           category: categories[index % categories.length],
           color: colors[index % colors.length],
+          title: message.title || "", // Inherit keyword from message
         });
       }
     });

@@ -105,6 +105,13 @@ The application uses four main tables:
 
 ### Recent Changes
 
+- **January 16, 2025**: Enhanced bubble creation to preserve chat keywords
+  - Bubbles now inherit keywords from their source messages when created
+  - Messages with keywords: bubble shows the keyword as title immediately
+  - Messages without keywords: bubble shows "Add keyword..." placeholder
+  - Maintains seamless transition from chat messages to visual bubbles
+  - Fixed scroll position preservation during keyword editing
+
 - **January 16, 2025**: Implemented in-place keyword editing system
   - Moved keyword inputs directly onto each message bubble for better UX
   - Existing keywords show as clickable purple tags that can be edited in-place
