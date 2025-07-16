@@ -105,6 +105,16 @@ The application uses four main tables:
 
 ### Recent Changes
 
+- **January 16, 2025**: Added message selection and movement functionality
+  - Added selection mode toggle button in chat header
+  - Messages become selectable with checkboxes when selection mode is enabled
+  - Each selected message can have a keyword/title assigned via input field
+  - Selection toolbar shows count and provides Select All/Clear options
+  - Move dialog allows creating new conversations or moving to existing ones
+  - Option to copy or move messages (remove from original conversation)
+  - Added title field to messages database schema to support keywords
+  - Multi-select functionality for organizing conversations efficiently
+
 - **January 16, 2025**: Added "Today Talk" quick conversation creation
   - Added "Today Talk" button on conversations page alongside existing "New" button
   - Automatically generates conversation title with format "16 July 2025 Brain talk"

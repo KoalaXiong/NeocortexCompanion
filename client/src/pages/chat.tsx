@@ -3,10 +3,14 @@ import { useLocation, useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, Workflow } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
+import { ArrowLeft, Send, Workflow, CheckSquare, Square, Copy, Move, Plus } from "lucide-react";
 import MessageBubble from "@/components/message-bubble";
 import { apiRequest } from "@/lib/queryClient";
-import type { Conversation, MessageWithBubble, InsertMessage, InsertConversation } from "@shared/schema";
+import type { Conversation, ConversationWithStats, MessageWithBubble, InsertMessage, InsertConversation } from "@shared/schema";
 
 export default function Chat() {
   const { id } = useParams();
@@ -15,6 +19,13 @@ export default function Chat() {
   const [message, setMessage] = useState("");
   const [conversationName, setConversationName] = useState("");
   const [isEditingName, setIsEditingName] = useState(false);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedMessages, setSelectedMessages] = useState<Set<number>>(new Set());
+  const [messageKeywords, setMessageKeywords] = useState<Map<number, string>>(new Map());
+  const [showMoveDialog, setShowMoveDialog] = useState(false);
+  const [newConversationTitle, setNewConversationTitle] = useState("");
+  const [targetConversationId, setTargetConversationId] = useState<string>("");
+  const [removeFromOriginal, setRemoveFromOriginal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
@@ -29,6 +40,11 @@ export default function Chat() {
   const { data: messages = [], isLoading } = useQuery<MessageWithBubble[]>({
     queryKey: ["/api/conversations", conversationId, "messages"],
     enabled: !!conversationId,
+  });
+
+  // Get all conversations for move dialog
+  const { data: allConversations = [] } = useQuery<ConversationWithStats[]>({
+    queryKey: ["/api/conversations"],
   });
 
   // Create new conversation mutation
@@ -72,6 +88,133 @@ export default function Chat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Selection handlers
+  const handleSelectionChange = (messageId: number, selected: boolean) => {
+    setSelectedMessages(prev => {
+      const newSet = new Set(prev);
+      if (selected) {
+        newSet.add(messageId);
+      } else {
+        newSet.delete(messageId);
+        setMessageKeywords(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(messageId);
+          return newMap;
+        });
+      }
+      return newSet;
+    });
+  };
+
+  const handleKeywordChange = (messageId: number, keyword: string) => {
+    setMessageKeywords(prev => {
+      const newMap = new Map(prev);
+      newMap.set(messageId, keyword);
+      return newMap;
+    });
+  };
+
+  const toggleSelectionMode = () => {
+    setIsSelectionMode(!isSelectionMode);
+    if (isSelectionMode) {
+      setSelectedMessages(new Set());
+      setMessageKeywords(new Map());
+    }
+  };
+
+  const selectAllMessages = () => {
+    setSelectedMessages(new Set(messages.map(m => m.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedMessages(new Set());
+    setMessageKeywords(new Map());
+  };
+
+  // Move/Copy handlers
+  const handleMoveToNewConversation = async () => {
+    if (selectedMessages.size === 0 || !newConversationTitle.trim()) return;
+    
+    try {
+      // Create new conversation
+      const createResponse = await apiRequest("POST", "/api/conversations", { 
+        name: newConversationTitle.trim() 
+      });
+      const newConversation = await createResponse.json();
+      
+      // Get selected message details
+      const selectedMessagesList = messages.filter(m => selectedMessages.has(m.id));
+      
+      // Copy messages to new conversation
+      for (const msg of selectedMessagesList) {
+        const keyword = messageKeywords.get(msg.id) || "";
+        await apiRequest("POST", "/api/messages", {
+          conversationId: newConversation.id,
+          text: msg.text,
+          title: keyword
+        });
+        
+        // Remove from original if requested
+        if (removeFromOriginal) {
+          await apiRequest("DELETE", `/api/messages/${msg.id}`);
+        }
+      }
+      
+      // Refresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
+      
+      // Clear selection and close dialog
+      clearSelection();
+      setShowMoveDialog(false);
+      setNewConversationTitle("");
+      setRemoveFromOriginal(false);
+      
+      // Navigate to new conversation
+      setLocation(`/chat/${newConversation.id}`);
+      
+    } catch (error) {
+      console.error("Error moving messages:", error);
+    }
+  };
+
+  const handleMoveToExistingConversation = async () => {
+    if (selectedMessages.size === 0 || !targetConversationId) return;
+    
+    try {
+      // Get selected message details
+      const selectedMessagesList = messages.filter(m => selectedMessages.has(m.id));
+      
+      // Copy messages to target conversation
+      for (const msg of selectedMessagesList) {
+        const keyword = messageKeywords.get(msg.id) || "";
+        await apiRequest("POST", "/api/messages", {
+          conversationId: parseInt(targetConversationId),
+          text: msg.text,
+          title: keyword
+        });
+        
+        // Remove from original if requested
+        if (removeFromOriginal) {
+          await apiRequest("DELETE", `/api/messages/${msg.id}`);
+        }
+      }
+      
+      // Refresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
+      
+      // Clear selection and close dialog
+      clearSelection();
+      setShowMoveDialog(false);
+      setTargetConversationId("");
+      setRemoveFromOriginal(false);
+      
+    } catch (error) {
+      console.error("Error moving messages:", error);
+    }
+  };
 
   useEffect(() => {
     if (conversation) {
@@ -158,6 +301,14 @@ export default function Chat() {
           </div>
           <div className="flex items-center space-x-2">
             <span className="text-sm text-purple-200">{wordCount} words</span>
+            <Button
+              onClick={toggleSelectionMode}
+              variant="ghost"
+              size="sm"
+              className="hover:bg-white/20 text-white"
+            >
+              {isSelectionMode ? <Square className="h-4 w-4" /> : <CheckSquare className="h-4 w-4" />}
+            </Button>
             {conversationId && (
               <Button
                 variant="ghost"
@@ -172,6 +323,46 @@ export default function Chat() {
           </div>
         </div>
       </div>
+
+      {/* Selection Toolbar */}
+      {isSelectionMode && (
+        <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <span className="text-sm font-medium text-blue-800">
+                {selectedMessages.size} selected
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={selectAllMessages}
+                disabled={selectedMessages.size === messages.length}
+              >
+                Select All
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearSelection}
+                disabled={selectedMessages.size === 0}
+              >
+                Clear
+              </Button>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowMoveDialog(true)}
+                disabled={selectedMessages.size === 0}
+              >
+                <Move className="h-4 w-4 mr-1" />
+                Move
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto">
@@ -191,6 +382,11 @@ export default function Chat() {
                 key={message.id}
                 message={message}
                 isUser={index % 2 === 0} // Alternate between user and self
+                isSelectable={isSelectionMode}
+                isSelected={selectedMessages.has(message.id)}
+                keyword={messageKeywords.get(message.id) || ""}
+                onSelectionChange={handleSelectionChange}
+                onKeywordChange={handleKeywordChange}
               />
             ))
           )}
@@ -234,6 +430,85 @@ export default function Chat() {
           </div>
         </div>
       </div>
+
+      {/* Move Messages Dialog */}
+      <Dialog open={showMoveDialog} onOpenChange={setShowMoveDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Move Selected Messages</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-600 mb-3">
+                Moving {selectedMessages.size} message{selectedMessages.size !== 1 ? 's' : ''}
+              </p>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium">Create New Conversation</label>
+                  <Input
+                    placeholder="New conversation title..."
+                    value={newConversationTitle}
+                    onChange={(e) => setNewConversationTitle(e.target.value)}
+                    className="mt-1"
+                  />
+                  <Button
+                    onClick={handleMoveToNewConversation}
+                    disabled={!newConversationTitle.trim()}
+                    className="w-full mt-2"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create & Move
+                  </Button>
+                </div>
+                
+                <div className="text-center text-sm text-gray-500">or</div>
+                
+                <div>
+                  <label className="text-sm font-medium">Move to Existing Conversation</label>
+                  <Select value={targetConversationId} onValueChange={setTargetConversationId}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select conversation..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allConversations
+                        .filter(conv => conv.id !== conversationId)
+                        .map(conv => (
+                          <SelectItem key={conv.id} value={conv.id.toString()}>
+                            {conv.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={handleMoveToExistingConversation}
+                    disabled={!targetConversationId}
+                    className="w-full mt-2"
+                  >
+                    <Move className="h-4 w-4 mr-2" />
+                    Move to Conversation
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="mt-4 pt-4 border-t">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={removeFromOriginal}
+                    onChange={(e) => setRemoveFromOriginal(e.target.checked)}
+                    className="rounded"
+                  />
+                  <span className="text-sm">Remove from original conversation</span>
+                </label>
+                <p className="text-xs text-gray-500 mt-1">
+                  {removeFromOriginal ? "Messages will be moved" : "Messages will be copied"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
