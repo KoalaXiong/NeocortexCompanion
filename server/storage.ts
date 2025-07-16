@@ -30,6 +30,7 @@ export interface IStorage {
   getMessagesByConversation(conversationId: number): Promise<MessageWithBubble[]>;
   getMessage(id: number): Promise<Message | undefined>;
   createMessage(message: InsertMessage): Promise<Message>;
+  updateMessage(id: number, updates: Partial<InsertMessage>): Promise<Message>;
   deleteMessage(id: number): Promise<void>;
 
   // Bubbles
@@ -165,6 +166,15 @@ export class MemStorage implements IStorage {
     }
 
     return newMessage;
+  }
+
+  async updateMessage(id: number, updates: Partial<InsertMessage>): Promise<Message> {
+    const existing = this.messages.get(id);
+    if (!existing) throw new Error('Message not found');
+    
+    const updated: Message = { ...existing, ...updates };
+    this.messages.set(id, updated);
+    return updated;
   }
 
   async deleteMessage(id: number): Promise<void> {
@@ -358,6 +368,15 @@ export class DatabaseStorage implements IStorage {
       .values(message)
       .returning();
     return newMessage;
+  }
+
+  async updateMessage(id: number, updates: Partial<InsertMessage>): Promise<Message> {
+    const [updated] = await db
+      .update(messages)
+      .set(updates)
+      .where(eq(messages.id, id))
+      .returning();
+    return updated;
   }
 
   async deleteMessage(id: number): Promise<void> {

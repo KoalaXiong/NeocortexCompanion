@@ -122,6 +122,19 @@ export default function Chat() {
       newMap.set(messageId, keyword);
       return newMap;
     });
+
+    // Save keyword to the message in the database immediately
+    updateMessageTitle(messageId, keyword);
+  };
+
+  const updateMessageTitle = async (messageId: number, title: string) => {
+    try {
+      await apiRequest("PATCH", `/api/messages/${messageId}`, { title });
+      // Refresh messages to show the updated title
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
+    } catch (error) {
+      console.error("Error updating message title:", error);
+    }
   };
 
   const toggleSelectionMode = () => {

@@ -93,6 +93,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/messages/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = insertMessageSchema.partial().parse(req.body);
+      const message = await storage.updateMessage(id, updates);
+      res.json(message);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid message data", errors: error.errors });
+      }
+      if (error instanceof Error && error.message === "Message not found") {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      res.status(500).json({ message: "Failed to update message" });
+    }
+  });
+
   app.delete("/api/messages/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
