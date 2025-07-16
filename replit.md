@@ -105,6 +105,13 @@ The application uses four main tables:
 
 ### Recent Changes
 
+- **January 16, 2025**: Added "Today Talk" quick conversation creation
+  - Added "Today Talk" button on conversations page alongside existing "New" button
+  - Automatically generates conversation title with format "16 July 2025 Brain talk"
+  - Pre-fills the prompt with today's date but allows user to edit the title
+  - Supports customization like "16 July 2025 Brain talk cloudy"
+  - Streamlines daily journaling and brain dump creation process
+
 - **January 15, 2025**: Added keyword input functionality to bubble cards
   - Added title field to bubbles database schema with automatic migration
   - Implemented editable keyword input displayed on left of category tags

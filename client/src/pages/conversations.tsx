@@ -65,6 +65,19 @@ export default function Conversations() {
     }
   };
 
+  const handleCreateTodayTalk = () => {
+    const today = new Date();
+    const day = today.getDate();
+    const month = today.toLocaleString('en-US', { month: 'long' });
+    const year = today.getFullYear();
+    const defaultName = `${day} ${month} ${year} Brain talk`;
+    
+    const conversationName = prompt("Enter conversation name:", defaultName);
+    if (conversationName?.trim()) {
+      createConversationMutation.mutate({ name: conversationName.trim() });
+    }
+  };
+
   const handleEditConversation = (id: number, currentName: string) => {
     setEditingConversation({ id, name: currentName });
     setNewName(currentName);
@@ -136,14 +149,24 @@ export default function Conversations() {
                 </p>
               </div>
             </div>
-            <Button 
-              onClick={handleNewConversation}
-              disabled={createConversationMutation.isPending}
-              className="bg-white text-primary hover:bg-gray-100"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              New
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleCreateTodayTalk}
+                disabled={createConversationMutation.isPending}
+                className="bg-white text-primary hover:bg-gray-100"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Today Talk
+              </Button>
+              <Button 
+                onClick={handleNewConversation}
+                disabled={createConversationMutation.isPending}
+                className="bg-white text-primary hover:bg-gray-100"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                New
+              </Button>
+            </div>
           </div>
         </div>
       </div>
