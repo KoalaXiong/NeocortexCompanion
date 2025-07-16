@@ -44,8 +44,8 @@ export default function Bubbles() {
   const updateBubbleMutation = useMutation({
     mutationFn: async ({ bubbleId, x, y, color, category, title }: { bubbleId: number; x: number; y: number; color?: string; category?: string; title?: string }) => {
       const updates: any = { x, y };
-      if (color) updates.color = color;
-      if (category) updates.category = category;
+      if (color !== undefined) updates.color = color;
+      if (category !== undefined) updates.category = category;
       if (title !== undefined) updates.title = title;
       const response = await apiRequest("PATCH", `/api/bubbles/${bubbleId}`, updates);
       return response.json();
@@ -62,7 +62,7 @@ export default function Bubbles() {
         if (!old) return old;
         return old.map(bubble => 
           bubble.id === bubbleId 
-            ? { ...bubble, x, y, ...(color && { color }), ...(category && { category }), ...(title !== undefined && { title }) }
+            ? { ...bubble, x, y, ...(color !== undefined && { color }), ...(category !== undefined && { category }), ...(title !== undefined && { title }) }
             : bubble
         );
       });

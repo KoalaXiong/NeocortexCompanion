@@ -110,7 +110,8 @@ The application uses four main tables:
   - Gray tag icon for empty categories opens full category selection menu
   - Existing categories can be clicked to change or remove
   - Removed duplicate category dropdown from right-side controls
-  - Fixed "Remove Category" functionality to properly clear categories
+  - Fixed "Remove Category" functionality by correcting undefined vs falsy value handling
+  - Optimistic updates now properly handle empty string category values
   - Streamlined bubble editing interface with logical control grouping
 
 - **January 16, 2025**: Removed default category assignment for new bubbles
