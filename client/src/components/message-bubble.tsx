@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Lightbulb } from "lucide-react";
 import type { MessageWithBubble } from "@shared/schema";
 
 interface MessageBubbleProps {
@@ -30,11 +30,19 @@ export default function MessageBubble({
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} group relative`}>
       {isSelectable && (
         <div className="flex flex-col items-center justify-start mt-2 mr-2">
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={(checked) => onSelectionChange?.(message.id, !!checked)}
-            className="mb-2"
-          />
+          <button
+            onClick={() => onSelectionChange?.(message.id, !isSelected)}
+            className="mb-2 p-1 rounded-full transition-all hover:bg-gray-100"
+            type="button"
+          >
+            <Lightbulb 
+              className={`w-5 h-5 transition-all ${
+                isSelected 
+                  ? 'text-purple-500 fill-purple-500 drop-shadow-lg' 
+                  : 'text-purple-300 stroke-2'
+              }`}
+            />
+          </button>
           {isSelected && (
             <Input
               placeholder="keyword..."
