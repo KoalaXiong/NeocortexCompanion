@@ -27,8 +27,10 @@ export default function Chat() {
   const [targetConversationId, setTargetConversationId] = useState<string>("");
   const [removeFromOriginal, setRemoveFromOriginal] = useState(false);
   const [isUpdatingKeywords, setIsUpdatingKeywords] = useState(false);
+  const [savedScrollPosition, setSavedScrollPosition] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
   // Get conversation details
@@ -87,11 +89,16 @@ export default function Chat() {
   });
 
   useEffect(() => {
-    // Only auto-scroll if we're not updating keywords
-    if (!isUpdatingKeywords) {
+    if (isUpdatingKeywords && savedScrollPosition !== null && messagesContainerRef.current) {
+      // Restore scroll position after keyword update
+      messagesContainerRef.current.scrollTop = savedScrollPosition;
+      setSavedScrollPosition(null);
+      setIsUpdatingKeywords(false);
+    } else if (!isUpdatingKeywords && messages.length > 0) {
+      // Only auto-scroll to bottom for new messages
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, isUpdatingKeywords]);
+  }, [messages, isUpdatingKeywords, savedScrollPosition]);
 
   // Selection handlers
   const handleSelectionChange = (messageId: number, selected: boolean) => {
@@ -133,15 +140,19 @@ export default function Chat() {
 
   const updateMessageTitle = async (messageId: number, title: string) => {
     try {
+      // Save current scroll position before updating
+      if (messagesContainerRef.current) {
+        setSavedScrollPosition(messagesContainerRef.current.scrollTop);
+      }
       setIsUpdatingKeywords(true);
+      
       await apiRequest("PATCH", `/api/messages/${messageId}`, { title });
-      // Refresh messages to show the updated title without triggering scroll
+      // Refresh messages to show the updated title
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
-      // Reset the flag after a short delay to allow the query to complete
-      setTimeout(() => setIsUpdatingKeywords(false), 500);
     } catch (error) {
       console.error("Error updating message title:", error);
       setIsUpdatingKeywords(false);
+      setSavedScrollPosition(null);
     }
   };
 
@@ -403,7 +414,7 @@ export default function Chat() {
 
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
           {isLoading ? (
             <div className="text-center py-8">
