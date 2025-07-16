@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Send, Workflow, CheckSquare, Square, Copy, Move, Plus } from "lucide-react";
 import MessageBubble from "@/components/message-bubble";
@@ -95,6 +95,15 @@ export default function Chat() {
       const newSet = new Set(prev);
       if (selected) {
         newSet.add(messageId);
+        // Initialize keyword with existing message title if available
+        const message = messages.find(m => m.id === messageId);
+        if (message?.title && !messageKeywords.has(messageId)) {
+          setMessageKeywords(prev => {
+            const newMap = new Map(prev);
+            newMap.set(messageId, message.title);
+            return newMap;
+          });
+        }
       } else {
         newSet.delete(messageId);
         setMessageKeywords(prev => {
@@ -384,7 +393,7 @@ export default function Chat() {
                 isUser={index % 2 === 0} // Alternate between user and self
                 isSelectable={isSelectionMode}
                 isSelected={selectedMessages.has(message.id)}
-                keyword={messageKeywords.get(message.id) || ""}
+                keyword={messageKeywords.get(message.id) || message.title || ""}
                 onSelectionChange={handleSelectionChange}
                 onKeywordChange={handleKeywordChange}
               />
@@ -436,6 +445,9 @@ export default function Chat() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Move Selected Messages</DialogTitle>
+            <DialogDescription>
+              Choose how to organize your selected messages into conversations.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
