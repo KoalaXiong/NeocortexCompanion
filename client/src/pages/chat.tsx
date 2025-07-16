@@ -26,6 +26,7 @@ export default function Chat() {
   const [newConversationTitle, setNewConversationTitle] = useState("");
   const [targetConversationId, setTargetConversationId] = useState<string>("");
   const [removeFromOriginal, setRemoveFromOriginal] = useState(false);
+  const [isUpdatingKeywords, setIsUpdatingKeywords] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
@@ -86,8 +87,11 @@ export default function Chat() {
   });
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    // Only auto-scroll if we're not updating keywords
+    if (!isUpdatingKeywords) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isUpdatingKeywords]);
 
   // Selection handlers
   const handleSelectionChange = (messageId: number, selected: boolean) => {
@@ -129,11 +133,15 @@ export default function Chat() {
 
   const updateMessageTitle = async (messageId: number, title: string) => {
     try {
+      setIsUpdatingKeywords(true);
       await apiRequest("PATCH", `/api/messages/${messageId}`, { title });
-      // Refresh messages to show the updated title
+      // Refresh messages to show the updated title without triggering scroll
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
+      // Reset the flag after a short delay to allow the query to complete
+      setTimeout(() => setIsUpdatingKeywords(false), 500);
     } catch (error) {
       console.error("Error updating message title:", error);
+      setIsUpdatingKeywords(false);
     }
   };
 
