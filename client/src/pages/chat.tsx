@@ -378,6 +378,20 @@ export default function Chat() {
               </Button>
             </div>
             <div className="flex items-center space-x-2">
+              {selectedMessages.size === 1 && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-blue-700">Keyword:</span>
+                  <Input
+                    placeholder="Add keyword..."
+                    value={messageKeywords.get(Array.from(selectedMessages)[0]) || ""}
+                    onChange={(e) => {
+                      const messageId = Array.from(selectedMessages)[0];
+                      handleKeywordChange(messageId, e.target.value);
+                    }}
+                    className="w-32 h-8 text-sm"
+                  />
+                </div>
+              )}
               <Button
                 variant="outline"
                 size="sm"

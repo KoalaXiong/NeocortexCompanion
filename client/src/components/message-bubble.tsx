@@ -29,10 +29,10 @@ export default function MessageBubble({
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} group relative`}>
       {isSelectable && (
-        <div className="flex flex-col items-center justify-start mt-2 mr-2">
+        <div className="flex items-center justify-start mt-2 mr-2">
           <button
             onClick={() => onSelectionChange?.(message.id, !isSelected)}
-            className="mb-2 p-1 rounded-full transition-all hover:bg-gray-100"
+            className="p-1 rounded-full transition-all hover:bg-gray-100"
             type="button"
           >
             <Lightbulb 
@@ -43,14 +43,6 @@ export default function MessageBubble({
               }`}
             />
           </button>
-          {isSelected && (
-            <Input
-              placeholder="keyword..."
-              value={keyword}
-              onChange={(e) => onKeywordChange?.(message.id, e.target.value)}
-              className="w-20 h-6 text-xs px-1 text-center"
-            />
-          )}
         </div>
       )}
       <div className={`max-w-xs md:max-w-md rounded-2xl px-4 py-3 shadow-sm transition-all ${
