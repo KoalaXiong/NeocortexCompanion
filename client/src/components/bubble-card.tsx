@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { GripVertical, Palette, Tag } from "lucide-react";
+import { GripVertical, Palette, Tag, Plus } from "lucide-react";
 import type { BubbleWithMessage } from "@shared/schema";
 
 interface BubbleCardProps {
@@ -187,14 +187,22 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
                 autoFocus
                 onMouseDown={(e) => e.stopPropagation()}
               />
-            ) : (
+            ) : localTitle ? (
               <span 
                 className={`${colorClasses.bg} ${colorClasses.text} px-2 py-1 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity`}
                 onClick={() => setIsEditingTitle(true)}
                 onMouseDown={(e) => e.stopPropagation()}
               >
-                {localTitle || "Add keyword..."}
+                {localTitle}
               </span>
+            ) : (
+              <button 
+                className={`inline-flex items-center justify-center w-6 h-6 rounded-full transition-all hover:scale-110 ${colorClasses.bg} ${colorClasses.text} cursor-pointer`}
+                onClick={() => setIsEditingTitle(true)}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <Plus className="w-3 h-3" />
+              </button>
             )}
             
             {/* Category tag */}

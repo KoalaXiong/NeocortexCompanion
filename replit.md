@@ -105,11 +105,17 @@ The application uses four main tables:
 
 ### Recent Changes
 
+- **January 16, 2025**: Unified keyword input styling across chat and bubbles
+  - Changed bubble "Add keyword..." placeholder to match chat interface style
+  - Now shows small purple circle with "+" icon instead of text placeholder
+  - Consistent visual language between chat messages and bubble cards
+  - Maintains all existing keyword editing functionality with improved UI
+
 - **January 16, 2025**: Added "Recreate Bubbles" one-click functionality
   - Added "Recreate Bubbles" button in header (left of "Save Layout")
   - One-click operation: deletes all existing bubbles then creates fresh ones from latest chat messages
   - Preserves any new keywords added to messages since bubbles were last created
-  - Uses Promise.all for efficient bulk deletion before recreation
+  - Uses sequential deletion with proper callback chaining for reliable operation
   - Maintains grid layout positioning for newly created bubbles
 
 - **January 16, 2025**: Enhanced bubble creation to preserve chat keywords
