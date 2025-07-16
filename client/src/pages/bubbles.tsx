@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useLocation, useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Save, FileText, FileDown, Plus, Link as LinkIcon, Palette } from "lucide-react";
+import { ArrowLeft, Save, FileText, FileDown, Plus, Link as LinkIcon, Palette, RefreshCw } from "lucide-react";
 import BubbleCard from "@/components/bubble-card";
 import { apiRequest } from "@/lib/queryClient";
 import type { BubbleWithMessage, InsertBubble } from "@shared/schema";
@@ -24,6 +24,16 @@ export default function Bubbles() {
     mutationFn: async (data: InsertBubble) => {
       const response = await apiRequest("POST", "/api/bubbles", data);
       return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", id, "bubbles"] });
+    },
+  });
+
+  // Delete bubble mutation
+  const deleteBubbleMutation = useMutation({
+    mutationFn: async (bubbleId: number) => {
+      await apiRequest("DELETE", `/api/bubbles/${bubbleId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", id, "bubbles"] });
@@ -98,6 +108,39 @@ export default function Bubbles() {
         });
       }
     });
+  };
+
+  // Recreate all bubbles from latest messages
+  const handleRecreateBubbles = async () => {
+    if (bubbles.length === 0) {
+      // If no bubbles exist, just create them
+      handleCreateBubbles();
+      return;
+    }
+
+    // Delete all existing bubbles first
+    let deletedCount = 0;
+    const totalBubbles = bubbles.length;
+    
+    const deleteNextBubble = () => {
+      if (deletedCount < totalBubbles) {
+        const bubble = bubbles[deletedCount];
+        deleteBubbleMutation.mutate(bubble.id, {
+          onSuccess: () => {
+            deletedCount++;
+            if (deletedCount === totalBubbles) {
+              // All bubbles deleted, now create new ones
+              setTimeout(() => handleCreateBubbles(), 200);
+            } else {
+              // Delete next bubble
+              deleteNextBubble();
+            }
+          }
+        });
+      }
+    };
+    
+    deleteNextBubble();
   };
 
   const handleBubbleColorChange = (bubbleId: number, newColor: string) => {
@@ -188,6 +231,16 @@ export default function Bubbles() {
             </div>
           </div>
           <div className="flex items-center space-x-3">
+            <Button
+              onClick={handleRecreateBubbles}
+              variant="ghost"
+              size="sm"
+              className="bg-white/20 hover:bg-white/30 text-white"
+              disabled={messages.length === 0}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Recreate Bubbles
+            </Button>
             <Button
               onClick={handleSaveLayout}
               variant="ghost"
