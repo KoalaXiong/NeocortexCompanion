@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Lightbulb } from "lucide-react";
+import { Lightbulb, Plus } from "lucide-react";
 import type { MessageWithBubble } from "@shared/schema";
 
 interface MessageBubbleProps {
@@ -22,9 +22,33 @@ export default function MessageBubble({
   onSelectionChange,
   onKeywordChange 
 }: MessageBubbleProps) {
+  const [isEditingKeyword, setIsEditingKeyword] = useState(false);
+  const [keywordValue, setKeywordValue] = useState(keyword);
+
   const formatTime = (date: Date | string) => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
+
+  const handleKeywordSubmit = () => {
+    onKeywordChange?.(message.id, keywordValue);
+    setIsEditingKeyword(false);
+  };
+
+  const handleKeywordCancel = () => {
+    setKeywordValue(keyword);
+    setIsEditingKeyword(false);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleKeywordSubmit();
+    } else if (e.key === 'Escape') {
+      handleKeywordCancel();
+    }
+  };
+
+  const currentKeyword = keyword || message.title || "";
+  const hasKeyword = currentKeyword.length > 0;
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} group relative`}>
@@ -52,17 +76,64 @@ export default function MessageBubble({
           ? 'bg-primary text-white rounded-br-md' 
           : 'bg-white rounded-bl-md border border-gray-200'
       }`}>
-        {message.title && (
+        {/* Keyword display/input area */}
+        {isSelectable && isSelected && (
+          <div className="mb-2">
+            {isEditingKeyword ? (
+              <Input
+                value={keywordValue}
+                onChange={(e) => setKeywordValue(e.target.value)}
+                onBlur={handleKeywordSubmit}
+                onKeyDown={handleKeyPress}
+                placeholder="Add keyword..."
+                className="h-6 text-xs px-2"
+                autoFocus
+              />
+            ) : hasKeyword ? (
+              <button
+                onClick={() => {
+                  setKeywordValue(currentKeyword);
+                  setIsEditingKeyword(true);
+                }}
+                className={`inline-block px-2 py-1 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity ${
+                  isUser 
+                    ? 'bg-white/20 text-white' 
+                    : 'bg-purple-100 text-purple-700'
+                }`}
+              >
+                {currentKeyword}
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setKeywordValue("");
+                  setIsEditingKeyword(true);
+                }}
+                className={`inline-flex items-center justify-center w-6 h-6 rounded-full transition-all hover:scale-110 ${
+                  isUser 
+                    ? 'bg-white/20 text-white' 
+                    : 'bg-purple-100 text-purple-500'
+                }`}
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        )}
+        
+        {/* Show existing keyword even when not in selection mode */}
+        {(!isSelectable || !isSelected) && hasKeyword && (
           <div className="mb-2">
             <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
               isUser 
                 ? 'bg-white/20 text-white' 
-                : 'bg-blue-100 text-blue-700'
+                : 'bg-purple-100 text-purple-700'
             }`}>
-              {message.title}
+              {currentKeyword}
             </span>
           </div>
         )}
+
         <p className="text-sm md:text-base leading-relaxed">{message.text}</p>
         <p className={`text-xs mt-2 ${
           isUser ? 'text-purple-200' : 'text-gray-500'

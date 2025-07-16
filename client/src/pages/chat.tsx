@@ -392,33 +392,7 @@ export default function Chat() {
         </div>
       )}
 
-      {/* Keyword Input Area for Selected Messages */}
-      {isSelectionMode && selectedMessages.size > 0 && (
-        <div className="bg-purple-50 border-b border-purple-200 px-4 py-3">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-sm font-medium text-purple-800 mb-3">Add keywords to selected messages:</div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {Array.from(selectedMessages).map((messageId) => {
-                const message = messages.find(m => m.id === messageId);
-                if (!message) return null;
-                return (
-                  <div key={messageId} className="flex flex-col space-y-1">
-                    <div className="text-xs text-purple-600 font-medium truncate">
-                      {message.text.substring(0, 40)}...
-                    </div>
-                    <Input
-                      placeholder="Add keyword..."
-                      value={messageKeywords.get(messageId) || message.title || ""}
-                      onChange={(e) => handleKeywordChange(messageId, e.target.value)}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto">

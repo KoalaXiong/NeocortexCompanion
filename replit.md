@@ -105,6 +105,14 @@ The application uses four main tables:
 
 ### Recent Changes
 
+- **January 16, 2025**: Implemented in-place keyword editing system
+  - Moved keyword inputs directly onto each message bubble for better UX
+  - Existing keywords show as clickable purple tags that can be edited in-place
+  - Selected messages without keywords show a small purple "+" circle to add keywords
+  - Click-to-edit functionality with Enter to save, Escape to cancel
+  - Multiple messages can have keywords edited simultaneously
+  - Removed separate keyword input area to reduce UI clutter
+
 - **January 16, 2025**: Changed selection indicators from checkboxes to purple light bulb icons
   - Updated both message-level selection indicators and header selection toggle button
   - Selected state: Bright purple filled bulb with glow effect  
