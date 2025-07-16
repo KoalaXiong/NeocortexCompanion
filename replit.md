@@ -105,6 +105,13 @@ The application uses four main tables:
 
 ### Recent Changes
 
+- **January 16, 2025**: Changed selection indicators from checkboxes to purple light bulb icons
+  - Updated both message-level selection indicators and header selection toggle button
+  - Selected state: Bright purple filled bulb with glow effect  
+  - Unselected state: Light purple outline bulb
+  - Provides more intuitive visual metaphor for "lighting up" ideas during selection
+  - Maintains all existing selection functionality with improved user experience
+
 - **January 16, 2025**: Added message selection and movement functionality
   - Added selection mode toggle button in chat header
   - Messages become selectable with checkboxes when selection mode is enabled

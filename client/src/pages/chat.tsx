@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Send, Workflow, CheckSquare, Square, Copy, Move, Plus } from "lucide-react";
+import { ArrowLeft, Send, Workflow, Lightbulb, Copy, Move, Plus } from "lucide-react";
 import MessageBubble from "@/components/message-bubble";
 import { apiRequest } from "@/lib/queryClient";
 import type { Conversation, ConversationWithStats, MessageWithBubble, InsertMessage, InsertConversation } from "@shared/schema";
@@ -329,7 +329,13 @@ export default function Chat() {
               size="sm"
               className="hover:bg-white/20 text-white"
             >
-              {isSelectionMode ? <Square className="h-4 w-4" /> : <CheckSquare className="h-4 w-4" />}
+              <Lightbulb 
+                className={`h-4 w-4 transition-all ${
+                  isSelectionMode 
+                    ? 'fill-white drop-shadow-lg' 
+                    : 'stroke-2'
+                }`}
+              />
             </Button>
             {conversationId && (
               <Button
