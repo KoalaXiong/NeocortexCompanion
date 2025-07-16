@@ -107,11 +107,12 @@ The application uses four main tables:
 
 - **January 16, 2025**: Implemented smart bubble layout system
   - Bubbles now placed tightly together with minimal gaps (20px)
-  - Layout flows top to bottom, then left to right within visible window
+  - Layout flows in columns: fill top to bottom, then move to next column
   - Bubbles with same keywords are grouped together first
   - Then follows conversation sequence for ungrouped bubbles
-  - Dynamic column calculation based on window width for optimal space usage
+  - Dynamic column/row calculation based on window dimensions
   - Applied to both "Create Bubbles" and "Recreate Bubbles" functionality
+  - Fixed overlapping issues by proper column-based positioning
 
 - **January 16, 2025**: Moved category selection dropdown to keyword area
   - Category selection dropdown now positioned next to keyword input for better workflow

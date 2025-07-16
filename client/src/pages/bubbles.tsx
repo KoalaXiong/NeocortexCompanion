@@ -119,23 +119,21 @@ export default function Bubbles() {
       return keyA.localeCompare(keyB);
     });
 
-    // Calculate positions for all bubbles
-    let currentX = startX;
-    let currentY = startY;
+    // Calculate positions for all bubbles - fill columns top to bottom
+    const maxRows = Math.floor((window.innerHeight - 200) / (bubbleHeight + gapY)); // Account for header space
+    let currentColumn = 0;
+    let currentRow = 0;
     let bubbleIndex = 0;
 
     sortedGroups.forEach(([keyword, groupMessages]) => {
       groupMessages.forEach((message) => {
-        // If we exceed the row width, move to next row
-        if (currentX + bubbleWidth > window.innerWidth - 20) {
-          currentX = startX;
-          currentY += bubbleHeight + gapY;
-        }
+        const x = startX + currentColumn * (bubbleWidth + gapX);
+        const y = startY + currentRow * (bubbleHeight + gapY);
 
         createBubbleMutation.mutate({
           messageId: message.id,
-          x: currentX,
-          y: currentY,
+          x: x,
+          y: y,
           width: bubbleWidth,
           height: bubbleHeight,
           category: "", // No default category - let user add manually
@@ -143,7 +141,13 @@ export default function Bubbles() {
           title: message.title || "", // Inherit keyword from message
         });
 
-        currentX += bubbleWidth + gapX;
+        // Move to next position - fill column first (top to bottom)
+        currentRow++;
+        if (currentRow >= maxRows) {
+          currentRow = 0;
+          currentColumn++;
+        }
+        
         bubbleIndex++;
       });
     });
@@ -216,25 +220,23 @@ export default function Bubbles() {
         return keyA.localeCompare(keyB);
       });
 
-      // Calculate positions for all bubbles
-      let currentX = startX;
-      let currentY = startY;
+      // Calculate positions for all bubbles - fill columns top to bottom
+      const maxRows = Math.floor((window.innerHeight - 200) / (bubbleHeight + gapY)); // Account for header space
+      let currentColumn = 0;
+      let currentRow = 0;
       let bubbleIndex = 0;
 
       sortedGroups.forEach(([keyword, groupMessages]) => {
         groupMessages.forEach((message) => {
           console.log(`Creating bubble for message ${message.id} with title: ${message.title}`);
           
-          // If we exceed the row width, move to next row
-          if (currentX + bubbleWidth > window.innerWidth - 20) {
-            currentX = startX;
-            currentY += bubbleHeight + gapY;
-          }
+          const x = startX + currentColumn * (bubbleWidth + gapX);
+          const y = startY + currentRow * (bubbleHeight + gapY);
 
           createBubbleMutation.mutate({
             messageId: message.id,
-            x: currentX,
-            y: currentY,
+            x: x,
+            y: y,
             width: bubbleWidth,
             height: bubbleHeight,
             category: "", // No default category - let user add manually
@@ -242,7 +244,13 @@ export default function Bubbles() {
             title: message.title || "", // Inherit keyword from message
           });
 
-          currentX += bubbleWidth + gapX;
+          // Move to next position - fill column first (top to bottom)
+          currentRow++;
+          if (currentRow >= maxRows) {
+            currentRow = 0;
+            currentColumn++;
+          }
+          
           bubbleIndex++;
         });
       });
