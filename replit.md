@@ -105,6 +105,12 @@ The application uses four main tables:
 
 ### Recent Changes
 
+- **January 16, 2025**: Removed default category assignment for new bubbles
+  - Bubbles now created without automatic category tags
+  - Users can manually add categories using the tag dropdown or leave them empty
+  - Added small gray tag icon for empty categories that opens category selection
+  - Gives users full control over bubble organization and categorization
+
 - **January 16, 2025**: Unified keyword input styling across chat and bubbles
   - Changed bubble "Add keyword..." placeholder to match chat interface style
   - Now shows small purple circle with "+" icon instead of text placeholder

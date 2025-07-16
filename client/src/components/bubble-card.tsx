@@ -84,7 +84,7 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
       "action-items": "Action Items", 
       "key-question": "Key Question"
     };
-    return labelMap[category as keyof typeof labelMap] || "General";
+    return labelMap[category as keyof typeof labelMap] || "";
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -206,9 +206,20 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
             )}
             
             {/* Category tag */}
-            <span className={`${colorClasses.bg} ${colorClasses.text} px-2 py-1 rounded-full text-xs font-medium`}>
-              {getCategoryLabel(bubble.category)}
-            </span>
+            {bubble.category ? (
+              <span className={`${colorClasses.bg} ${colorClasses.text} px-2 py-1 rounded-full text-xs font-medium`}>
+                {getCategoryLabel(bubble.category)}
+              </span>
+            ) : (
+              <button 
+                className="inline-flex items-center justify-center w-6 h-6 rounded-full transition-all hover:scale-110 bg-gray-100 text-gray-400 cursor-pointer"
+                onClick={() => onCategoryChange?.(bubble.id, 'core-insight')}
+                onMouseDown={(e) => e.stopPropagation()}
+                title="Add category"
+              >
+                <Tag className="w-3 h-3" />
+              </button>
+            )}
           </div>
           <div className="flex items-center space-x-1" onMouseDown={(e) => e.stopPropagation()}>
             <DropdownMenu>

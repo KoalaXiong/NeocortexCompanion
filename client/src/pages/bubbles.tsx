@@ -90,7 +90,6 @@ export default function Bubbles() {
 
   // Create bubbles for messages that don't have them
   const handleCreateBubbles = () => {
-    const categories = ["core-insight", "supporting-evidence", "personal-reflection", "action-items", "key-question"];
     const colors = ["blue", "green", "purple", "orange", "red"];
 
     messages.forEach((message, index) => {
@@ -102,7 +101,7 @@ export default function Bubbles() {
           y: 100 + Math.floor(index / 3) * 200,
           width: 280,
           height: 120,
-          category: categories[index % categories.length],
+          category: "", // No default category - let user add manually
           color: colors[index % colors.length],
           title: message.title || "", // Inherit keyword from message
         });
@@ -153,7 +152,6 @@ export default function Bubbles() {
     };
 
     const createNewBubbles = () => {
-      const categories = ["core-insight", "supporting-evidence", "personal-reflection", "action-items", "key-question"];
       const colors = ["blue", "green", "purple", "orange", "red"];
 
       messages.forEach((message, index) => {
@@ -164,7 +162,7 @@ export default function Bubbles() {
           y: 100 + Math.floor(index / 3) * 200,
           width: 280,
           height: 120,
-          category: categories[index % categories.length],
+          category: "", // No default category - let user add manually
           color: colors[index % colors.length],
           title: message.title || "", // Inherit keyword from message
         });
