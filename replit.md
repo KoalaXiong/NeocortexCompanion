@@ -105,6 +105,13 @@ The application uses four main tables:
 
 ### Recent Changes
 
+- **January 16, 2025**: Moved category selection dropdown to keyword area
+  - Category selection dropdown now positioned next to keyword input for better workflow
+  - Gray tag icon for empty categories opens full category selection menu
+  - Existing categories can be clicked to change or remove
+  - Removed duplicate category dropdown from right-side controls
+  - Streamlined bubble editing interface with logical control grouping
+
 - **January 16, 2025**: Removed default category assignment for new bubbles
   - Bubbles now created without automatic category tags
   - Users can manually add categories using the tag dropdown or leave them empty
