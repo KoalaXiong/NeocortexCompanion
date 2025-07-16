@@ -118,29 +118,37 @@ export default function Bubbles() {
       return;
     }
 
-    // Delete all existing bubbles first
-    let deletedCount = 0;
-    const totalBubbles = bubbles.length;
-    
-    const deleteNextBubble = () => {
-      if (deletedCount < totalBubbles) {
-        const bubble = bubbles[deletedCount];
+    // Delete all existing bubbles using Promise.all
+    const deletePromises = bubbles.map(bubble => 
+      new Promise((resolve) => {
         deleteBubbleMutation.mutate(bubble.id, {
-          onSuccess: () => {
-            deletedCount++;
-            if (deletedCount === totalBubbles) {
-              // All bubbles deleted, now create new ones
-              setTimeout(() => handleCreateBubbles(), 200);
-            } else {
-              // Delete next bubble
-              deleteNextBubble();
-            }
-          }
+          onSuccess: () => resolve(true),
+          onError: () => resolve(false)
         });
-      }
-    };
+      })
+    );
+
+    // Wait for all deletions to complete, then create new bubbles
+    await Promise.all(deletePromises);
     
-    deleteNextBubble();
+    // Small delay to ensure UI updates, then create new bubbles
+    setTimeout(() => {
+      const categories = ["core-insight", "supporting-evidence", "personal-reflection", "action-items", "key-question"];
+      const colors = ["blue", "green", "purple", "orange", "red"];
+
+      messages.forEach((message, index) => {
+        createBubbleMutation.mutate({
+          messageId: message.id,
+          x: 100 + (index % 3) * 350,
+          y: 100 + Math.floor(index / 3) * 200,
+          width: 280,
+          height: 120,
+          category: categories[index % categories.length],
+          color: colors[index % colors.length],
+          title: message.title || "", // Inherit keyword from message
+        });
+      });
+    }, 300);
   };
 
   const handleBubbleColorChange = (bubbleId: number, newColor: string) => {

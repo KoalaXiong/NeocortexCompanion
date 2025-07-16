@@ -105,6 +105,13 @@ The application uses four main tables:
 
 ### Recent Changes
 
+- **January 16, 2025**: Added "Recreate Bubbles" one-click functionality
+  - Added "Recreate Bubbles" button in header (left of "Save Layout")
+  - One-click operation: deletes all existing bubbles then creates fresh ones from latest chat messages
+  - Preserves any new keywords added to messages since bubbles were last created
+  - Uses Promise.all for efficient bulk deletion before recreation
+  - Maintains grid layout positioning for newly created bubbles
+
 - **January 16, 2025**: Enhanced bubble creation to preserve chat keywords
   - Bubbles now inherit keywords from their source messages when created
   - Messages with keywords: bubble shows the keyword as title immediately
