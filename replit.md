@@ -144,6 +144,13 @@ The application uses four main tables:
   - Unconnected bubbles are placed after connected chains
   - Falls back to spatial sorting when no connections exist
 
+- **January 19, 2025**: Enhanced article creation with connection-aware bubble ordering and tags
+  - Article page now displays bubbles in same sequence as bubble page (connection order first)
+  - Added connection-based tags using the first keyword from each connection chain
+  - Connection tags allow one-click addition of entire connected bubble groups to articles
+  - Default sorting mode changed to "Connection Order" to prioritize connected bubbles
+  - Tag badges show connection group names and bubble count with color coding
+
 - **January 16, 2025**: Moved category selection dropdown to keyword area
   - Category selection dropdown now positioned next to keyword input for better workflow
   - Gray tag icon for empty categories opens full category selection menu

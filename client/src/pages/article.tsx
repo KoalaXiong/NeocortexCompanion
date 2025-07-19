@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Save, Eye, FileDown } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Save, Eye, FileDown, Tag } from "lucide-react";
 import BubbleCard from "@/components/bubble-card";
 import PDFPreviewModal from "@/components/pdf-preview-modal";
 import { generatePDF } from "@/lib/pdf-generator";
@@ -20,9 +21,18 @@ export default function ArticlePage() {
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [usedBubbles, setUsedBubbles] = useState<number[]>([]);
   const [currentArticleId, setCurrentArticleId] = useState<number | null>(null);
-  const [sortMode, setSortMode] = useState<'original' | 'keyword' | 'tag'>('original');
+  const [sortMode, setSortMode] = useState<'connection' | 'original' | 'keyword' | 'tag'>('connection');
   const editorRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+
+  // Load connections from localStorage (same as bubble page)
+  const [connections] = useState<Array<{id: string; from: number; to: number}>>(() => {
+    if (typeof window !== 'undefined' && id) {
+      const stored = localStorage.getItem(`bubbleConnections_${id}`);
+      return stored ? JSON.parse(stored) : [];
+    }
+    return [];
+  });
 
   const { data: bubbles = [], isLoading } = useQuery<BubbleWithMessage[]>({
     queryKey: ["/api/conversations", id, "bubbles"],
@@ -118,11 +128,151 @@ export default function ArticlePage() {
     return labelMap[category as keyof typeof labelMap] || "General";
   };
 
+  // Connection-aware sorting (same logic as bubble page)
+  const getConnectionOrderedBubbles = (bubblesArray: BubbleWithMessage[]) => {
+    const visited = new Set<number>();
+    const ordered: BubbleWithMessage[] = [];
+    const unconnected: BubbleWithMessage[] = [];
+    const connectionChains: BubbleWithMessage[][] = [];
+
+    const buildChain = (startBubbleId: number, chain: BubbleWithMessage[] = []): BubbleWithMessage[] => {
+      if (visited.has(startBubbleId)) return chain;
+      
+      const bubble = bubblesArray.find(b => b.id === startBubbleId);
+      if (!bubble) return chain;
+      
+      visited.add(startBubbleId);
+      chain.push(bubble);
+
+      const outgoingConnections = connections
+        .filter(conn => conn.from === startBubbleId)
+        .sort((a, b) => {
+          const aTime = parseInt(a.id.split('-').pop() || '0');
+          const bTime = parseInt(b.id.split('-').pop() || '0');
+          return aTime - bTime;
+        });
+
+      if (outgoingConnections.length > 0) {
+        const nextBubbleId = outgoingConnections[0].to;
+        return buildChain(nextBubbleId, chain);
+      }
+
+      return chain;
+    };
+
+    // Find starting points for chains
+    const startingBubbles = bubblesArray.filter(bubble => {
+      const hasIncoming = connections.some(conn => conn.to === bubble.id);
+      const hasOutgoing = connections.some(conn => conn.from === bubble.id);
+      return hasOutgoing && !hasIncoming;
+    });
+
+    // Build chains from starting points
+    startingBubbles.forEach(startBubble => {
+      if (!visited.has(startBubble.id)) {
+        const chain = buildChain(startBubble.id);
+        if (chain.length > 0) {
+          connectionChains.push(chain);
+        }
+      }
+    });
+
+    // Add remaining connected bubbles
+    const remainingConnected = bubblesArray.filter(bubble => {
+      const isConnected = connections.some(conn => conn.from === bubble.id || conn.to === bubble.id);
+      return isConnected && !visited.has(bubble.id);
+    });
+
+    remainingConnected.forEach(bubble => {
+      if (!visited.has(bubble.id)) {
+        const chain = buildChain(bubble.id);
+        if (chain.length > 0) {
+          connectionChains.push(chain);
+        }
+      }
+    });
+
+    // Flatten chains
+    connectionChains.forEach(chain => {
+      ordered.push(...chain);
+    });
+
+    // Add unconnected bubbles
+    bubblesArray.forEach(bubble => {
+      if (!visited.has(bubble.id)) {
+        unconnected.push(bubble);
+      }
+    });
+
+    return [...ordered, ...unconnected];
+  };
+
+  // Create connection tags - each connection chain gets a tag with first keyword
+  const getConnectionTags = () => {
+    const tags: Array<{name: string; bubbleIds: number[]; color: string}> = [];
+    const visited = new Set<number>();
+
+    const buildChain = (startBubbleId: number): number[] => {
+      const chain: number[] = [];
+      let currentId = startBubbleId;
+      
+      while (currentId && !visited.has(currentId)) {
+        visited.add(currentId);
+        chain.push(currentId);
+        
+        const nextConnection = connections
+          .filter(conn => conn.from === currentId)
+          .sort((a, b) => {
+            const aTime = parseInt(a.id.split('-').pop() || '0');
+            const bTime = parseInt(b.id.split('-').pop() || '0');
+            return aTime - bTime;
+          })[0];
+        
+        currentId = nextConnection?.to;
+      }
+      
+      return chain;
+    };
+
+    // Find chain starting points
+    const startingBubbles = bubbles.filter(bubble => {
+      const hasIncoming = connections.some(conn => conn.to === bubble.id);
+      const hasOutgoing = connections.some(conn => conn.from === bubble.id);
+      return hasOutgoing && !hasIncoming;
+    });
+
+    startingBubbles.forEach(startBubble => {
+      if (!visited.has(startBubble.id)) {
+        const chainIds = buildChain(startBubble.id);
+        if (chainIds.length > 1) { // Only create tag for chains with multiple bubbles
+          const firstBubble = bubbles.find(b => b.id === chainIds[0]);
+          const tagName = firstBubble?.title || `Connection ${chainIds[0]}`;
+          const colors = ["blue", "green", "purple", "orange", "red"];
+          const tagColor = colors[tags.length % colors.length];
+          
+          tags.push({
+            name: tagName,
+            bubbleIds: chainIds,
+            color: tagColor
+          });
+        }
+      }
+    });
+
+    return tags;
+  };
+
   const availableBubbles = bubbles.filter(bubble => !usedBubbles.includes(bubble.id));
+  const connectionTags = getConnectionTags();
   
   // Sort bubbles based on current sort mode
   const sortedAvailableBubbles = [...availableBubbles].sort((a, b) => {
     switch (sortMode) {
+      case 'connection':
+        // Use same logic as bubble page - connected bubbles first, in connection order
+        return connections.length > 0 
+          ? getConnectionOrderedBubbles(availableBubbles).indexOf(a) - getConnectionOrderedBubbles(availableBubbles).indexOf(b)
+          : a.id - b.id;
       case 'keyword':
         const titleA = a.title || '';
         const titleB = b.title || '';
@@ -131,7 +281,7 @@ export default function ArticlePage() {
         return getCategoryLabel(a.category).localeCompare(getCategoryLabel(b.category));
       case 'original':
       default:
-        return a.id - b.id; // Sort by ID (creation order)
+        return a.id - b.id;
     }
   });
 
@@ -222,8 +372,55 @@ export default function ArticlePage() {
           <div className="p-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Available Bubbles</h3>
             
+            {/* Connection Tags */}
+            {connectionTags.length > 0 && (
+              <div className="mb-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <Tag className="w-4 h-4 mr-1" />
+                  Connection Groups
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {connectionTags.map((tag, index) => (
+                    <Badge 
+                      key={index}
+                      variant="secondary" 
+                      className={`${getColorClasses(tag.color).bg} ${getColorClasses(tag.color).text} cursor-pointer hover:opacity-80 transition-opacity`}
+                      onClick={() => {
+                        // Add all bubbles from this connection to the article
+                        const newUsedBubbles = [...usedBubbles, ...tag.bubbleIds.filter(id => !usedBubbles.includes(id))];
+                        setUsedBubbles(newUsedBubbles);
+                        
+                        // Add tag heading and all bubble content
+                        const tagContent = tag.bubbleIds
+                          .map(bubbleId => {
+                            const bubble = bubbles.find(b => b.id === bubbleId);
+                            return bubble ? bubble.content : '';
+                          })
+                          .filter(content => content)
+                          .map(content => `<p class="mb-4">${content}</p>`)
+                          .join('');
+                        
+                        const tagSection = `<h3 class="text-lg font-semibold mb-3">${tag.name}</h3>${tagContent}`;
+                        setArticleContent(prev => prev + tagSection);
+                      }}
+                    >
+                      {tag.name} ({tag.bubbleIds.length})
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Sorting Controls */}
             <div className="flex flex-wrap gap-2 mb-4">
+              <Button
+                variant={sortMode === 'connection' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSortMode('connection')}
+                className="text-xs"
+              >
+                Connection Order
+              </Button>
               <Button
                 variant={sortMode === 'keyword' ? 'default' : 'outline'}
                 size="sm"
@@ -246,7 +443,7 @@ export default function ArticlePage() {
                 onClick={() => setSortMode('original')}
                 className="text-xs"
               >
-                Reset List
+                Original Order
               </Button>
             </div>
             
