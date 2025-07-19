@@ -62,38 +62,12 @@ export default function ArticlePage() {
 
   // Update editor content when articleContent changes (for bubble drops and loading)
   useEffect(() => {
-    if (editorRef.current && editorRef.current.innerHTML !== articleContent) {
-      const selection = window.getSelection();
-      const hadFocus = document.activeElement === editorRef.current;
-      
-      // Save cursor position if editor has focus
-      let cursorPos = null;
-      if (hadFocus && selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        cursorPos = {
-          startContainer: range.startContainer,
-          startOffset: range.startOffset,
-          endContainer: range.endContainer,
-          endOffset: range.endOffset
-        };
-      }
-
-      // Update content
-      editorRef.current.innerHTML = articleContent;
-      
-      // Restore cursor position if it was focused
-      if (hadFocus && cursorPos) {
-        try {
-          const newRange = document.createRange();
-          newRange.setStart(cursorPos.startContainer, cursorPos.startOffset);
-          newRange.setEnd(cursorPos.endContainer, cursorPos.endOffset);
-          selection?.removeAllRanges();
-          selection?.addRange(newRange);
-          editorRef.current.focus();
-        } catch (e) {
-          // If cursor restoration fails, just focus at the end
-          editorRef.current.focus();
-        }
+    if (editorRef.current && articleContent !== undefined) {
+      // Only update if content has actually changed
+      const currentContent = editorRef.current.innerHTML;
+      if (currentContent !== articleContent) {
+        // Simple content update without cursor restoration on initial load
+        editorRef.current.innerHTML = articleContent || '';
       }
     }
   }, [articleContent]);
@@ -360,89 +334,40 @@ export default function ArticlePage() {
     updateWordCount(articleContent);
   }, [articleContent]);
 
-  // Helper function to save cursor position
-  const saveCursorPosition = () => {
-    const selection = window.getSelection();
-    if (!selection || !editorRef.current) return null;
-    
-    const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-    if (!range) return null;
-
-    return {
-      startContainer: range.startContainer,
-      startOffset: range.startOffset,
-      endContainer: range.endContainer,
-      endOffset: range.endOffset
-    };
-  };
-
-  // Helper function to restore cursor position
-  const restoreCursorPosition = (cursorPos: any) => {
-    if (!cursorPos || !editorRef.current) return;
-
-    try {
-      const selection = window.getSelection();
-      if (!selection) return;
-
-      const range = document.createRange();
-      range.setStart(cursorPos.startContainer, cursorPos.startOffset);
-      range.setEnd(cursorPos.endContainer, cursorPos.endOffset);
-      
-      selection.removeAllRanges();
-      selection.addRange(range);
-    } catch (error) {
-      // Fallback: place cursor at end
-      const selection = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(editorRef.current);
-      range.collapse(false);
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-    }
-  };
-
-  // Formatting functions
+  // Formatting functions - simplified without cursor position management
   const applyFormat = (command: string, value?: string) => {
-    const cursorPos = saveCursorPosition();
-    document.execCommand(command, false, value);
     if (editorRef.current) {
+      editorRef.current.focus();
+      document.execCommand(command, false, value);
       const newContent = editorRef.current.innerHTML;
       setArticleContent(newContent);
-      
-      // Small delay to ensure DOM updates, then restore cursor
-      setTimeout(() => {
-        restoreCursorPosition(cursorPos);
-        editorRef.current?.focus();
-      }, 0);
     }
   };
 
   const insertHeading = (level: number) => {
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      const selectedText = range.toString() || 'Heading';
+    if (editorRef.current) {
+      editorRef.current.focus();
+      const selection = window.getSelection();
+      const selectedText = selection?.toString() || 'Heading';
       
-      const heading = document.createElement(`h${level}`);
-      heading.style.fontWeight = '600';
-      heading.style.marginBottom = '12px';
-      heading.style.marginTop = '24px';
-      heading.style.fontSize = level === 1 ? '24px' : level === 2 ? '20px' : '18px';
-      heading.style.color = '#374151';
-      heading.textContent = selectedText;
+      // Insert heading using document.execCommand for better compatibility
+      document.execCommand('formatBlock', false, `h${level}`);
       
-      range.deleteContents();
-      range.insertNode(heading);
-      
-      if (editorRef.current) {
-        setArticleContent(editorRef.current.innerHTML);
+      // If no text was selected, insert placeholder text
+      if (!selection?.toString()) {
+        document.execCommand('insertText', false, selectedText);
       }
+      
+      setArticleContent(editorRef.current.innerHTML);
     }
   };
 
   const insertDivider = () => {
-    const divider = '<hr style="margin: 24px 0; border: none; border-top: 2px solid #e5e7eb; width: 100%;">';
-    setArticleContent(prev => prev + divider);
+    if (editorRef.current) {
+      editorRef.current.focus();
+      document.execCommand('insertHTML', false, '<hr style="margin: 24px 0; border: none; border-top: 2px solid #e5e7eb; width: 100%;">');
+      setArticleContent(editorRef.current.innerHTML);
+    }
   };
 
   // Auto-save to local storage functionality
