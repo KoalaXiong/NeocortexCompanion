@@ -576,18 +576,38 @@ export default function ArticlePage() {
                         const newUsedBubbles = [...usedBubbles, ...tag.bubbleIds.filter(id => !usedBubbles.includes(id))];
                         setUsedBubbles(newUsedBubbles);
                         
-                        // Add tag heading and all bubble content
-                        const tagContent = tag.bubbleIds
-                          .map(bubbleId => {
+                        if (editorRef.current) {
+                          // Clear placeholder text if present
+                          const placeholder = editorRef.current.querySelector('[style*="color: #9ca3af"]');
+                          if (placeholder) {
+                            editorRef.current.innerHTML = '';
+                          }
+                          
+                          // Create and add tag heading
+                          const heading = document.createElement('h3');
+                          heading.style.fontSize = '18px';
+                          heading.style.fontWeight = '600';
+                          heading.style.marginBottom = '12px';
+                          heading.style.marginTop = '24px';
+                          heading.style.color = '#374151';
+                          heading.textContent = tag.name;
+                          editorRef.current.appendChild(heading);
+                          
+                          // Add each bubble's content as a paragraph
+                          tag.bubbleIds.forEach(bubbleId => {
                             const bubble = bubbles.find(b => b.id === bubbleId);
-                            return bubble ? bubble.message.text : '';
-                          })
-                          .filter(content => content)
-                          .map(content => `<p style="margin-bottom: 16px; line-height: 1.6;">${content}</p>`)
-                          .join('');
-                        
-                        const tagSection = `<h3 style="font-size: 18px; font-weight: 600; margin-bottom: 12px; margin-top: 24px; color: #374151;">${tag.name}</h3>${tagContent}`;
-                        setArticleContent(prev => prev + tagSection);
+                            if (bubble && bubble.message.text) {
+                              const paragraph = document.createElement('p');
+                              paragraph.style.marginBottom = '16px';
+                              paragraph.style.lineHeight = '1.6';
+                              paragraph.textContent = bubble.message.text;
+                              editorRef.current.appendChild(paragraph);
+                            }
+                          });
+                          
+                          // Update state with new content
+                          setArticleContent(editorRef.current.innerHTML);
+                        }
                       }}
                     >
                       {tag.name} ({tag.bubbleIds.length})
