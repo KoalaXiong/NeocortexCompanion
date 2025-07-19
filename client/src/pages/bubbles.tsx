@@ -96,9 +96,9 @@ export default function Bubbles() {
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     
-    // Be very conservative with space calculations to ensure no scrolling
-    const availableWidth = viewportWidth - 150; // Conservative - account for sidebar + floating buttons
-    const availableHeight = viewportHeight - 250; // Conservative - account for header + footer space
+    // Extremely conservative with space calculations to ensure no scrolling
+    const availableWidth = viewportWidth - 300; // Very conservative - account for sidebar + all margins
+    const availableHeight = viewportHeight - 300; // Very conservative - account for header + all margins
     
     const gapX = 10; // Smaller gaps to fit more
     const gapY = 10;
@@ -189,11 +189,11 @@ export default function Bubbles() {
         const x = startX + currentColumn * (bubbleWidth + gapX);
         const y = startY + currentRow * (bubbleHeight + gapY);
         
-        // Ensure bubble stays within viewport bounds with conservative margins
-        const maxX = Math.max(0, window.innerWidth - bubbleWidth - 150);
-        const maxY = Math.max(0, availableHeight - bubbleHeight);
-        const clampedX = Math.max(0, Math.min(x, maxX));
-        const clampedY = Math.max(0, Math.min(y, maxY));
+        // Ensure bubble stays within viewport bounds with very conservative margins
+        const maxX = Math.max(0, window.innerWidth - bubbleWidth - 200);
+        const maxY = Math.max(0, availableHeight - bubbleHeight - 50);
+        const clampedX = Math.max(startX, Math.min(x, maxX));
+        const clampedY = Math.max(startY, Math.min(y, maxY));
 
         createBubbleMutation.mutate({
           messageId: message.id,
@@ -304,11 +304,11 @@ export default function Bubbles() {
           const x = startX + currentColumn * (bubbleWidth + gapX);
           const y = startY + currentRow * (bubbleHeight + gapY);
           
-          // Ensure bubble stays within viewport bounds with conservative margins
-          const maxX = Math.max(0, window.innerWidth - bubbleWidth - 150); // Extra conservative space
-          const maxY = Math.max(0, availableHeight - bubbleHeight);
-          const clampedX = Math.max(0, Math.min(x, maxX));
-          const clampedY = Math.max(0, Math.min(y, maxY));
+          // Ensure bubble stays within viewport bounds with very conservative margins
+          const maxX = Math.max(0, window.innerWidth - bubbleWidth - 200); // Very conservative space
+          const maxY = Math.max(0, availableHeight - bubbleHeight - 50);
+          const clampedX = Math.max(startX, Math.min(x, maxX));
+          const clampedY = Math.max(startY, Math.min(y, maxY));
 
           createBubbleMutation.mutate({
             messageId: message.id,
@@ -408,63 +408,63 @@ export default function Bubbles() {
     <div className="h-screen flex flex-col gradient-purple-blue bubbles-page" style={{ overflow: 'hidden', width: '100vw', height: '100vh' }}>
       {/* Bubbles Header */}
       <div className="gradient-primary-to-secondary text-white px-4 py-4 shadow-sm">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center space-x-4">
+        <div className="flex items-center justify-between max-w-full mx-auto px-2">
+          <div className="flex items-center space-x-2">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setLocation(`/chat/${id}`)}
               className="hover:bg-white/20 text-white"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h2 className="text-xl font-bold">Bubble Organization</h2>
-              <p className="text-sm text-purple-200">Organize your thoughts spatially</p>
+              <h2 className="text-lg font-bold">Bubble Organization</h2>
+              <p className="text-xs text-purple-200">Organize your thoughts spatially</p>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-1">
             <Button
               onClick={handleRecreateBubbles}
               variant="ghost"
               size="sm"
-              className="bg-white/20 hover:bg-white/30 text-white"
+              className="bg-white/20 hover:bg-white/30 text-white text-xs px-2"
               disabled={messages.length === 0}
             >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Recreate Bubbles
+              <RefreshCw className="mr-1 h-3 w-3" />
+              Recreate
             </Button>
             <Button
               onClick={handleSaveLayout}
               variant="ghost"
               size="sm"
-              className="bg-white/20 hover:bg-white/30 text-white"
+              className="bg-white/20 hover:bg-white/30 text-white text-xs px-2"
             >
-              <Save className="mr-2 h-4 w-4" />
-              Save Layout
+              <Save className="mr-1 h-3 w-3" />
+              Save
             </Button>
             <Button
               onClick={() => setLocation(`/article/${id}`)}
               size="sm"
-              className="bg-white text-primary hover:bg-gray-100"
+              className="bg-white text-primary hover:bg-gray-100 text-xs px-2"
             >
-              <FileText className="mr-2 h-4 w-4" />
-              Create Article
+              <FileText className="mr-1 h-3 w-3" />
+              Article
             </Button>
             <Button
               onClick={() => window.open(`/api/export-pdf/${id}`, '_blank')}
               size="sm"
-              className="bg-yellow-400 text-yellow-900 hover:bg-yellow-300"
+              className="bg-yellow-400 text-yellow-900 hover:bg-yellow-300 text-xs px-2"
             >
-              <FileDown className="mr-2 h-4 w-4" />
-              Export PDF
+              <FileDown className="mr-1 h-3 w-3" />
+              PDF
             </Button>
           </div>
         </div>
       </div>
 
       {/* Canvas Area */}
-      <div className="flex-1 relative" style={{ overflow: 'hidden' }}>
+      <div className="flex-1 relative" style={{ overflow: 'hidden', height: 'calc(100vh - 100px)' }}>
         <div 
           ref={canvasRef}
           className="absolute inset-0 bubble-canvas"
@@ -474,7 +474,7 @@ export default function Bubbles() {
             overflow: 'hidden',
             width: '100%',
             height: '100%',
-            padding: '10px',
+            padding: '5px',
             boxSizing: 'border-box'
           }}
         >
@@ -509,29 +509,29 @@ export default function Bubbles() {
           )}
         </div>
 
-        {/* Floating Tools - positioned to stay within viewport */}
-        <div className="absolute bottom-4 right-4 space-y-2 z-50">
+        {/* Floating Tools - positioned within safe area */}
+        <div className="absolute bottom-2 right-2 flex space-x-1 z-50">
           <Button
             onClick={handleCreateBubbles}
             size="sm"
-            className="bg-white bubble-shadow rounded-2xl p-2 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
+            className="bg-white bubble-shadow rounded-lg p-1 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
             variant="ghost"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3 w-3" />
           </Button>
           <Button
             size="sm"
-            className="bg-white bubble-shadow rounded-2xl p-2 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
+            className="bg-white bubble-shadow rounded-lg p-1 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
             variant="ghost"
           >
-            <LinkIcon className="h-4 w-4" />
+            <LinkIcon className="h-3 w-3" />
           </Button>
           <Button
             size="sm"
-            className="bg-white bubble-shadow rounded-2xl p-2 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
+            className="bg-white bubble-shadow rounded-lg p-1 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
             variant="ghost"
           >
-            <Palette className="h-4 w-4" />
+            <Palette className="h-3 w-3" />
           </Button>
         </div>
       </div>
