@@ -385,7 +385,7 @@ export default function Bubbles() {
   }
 
   return (
-    <div className="h-screen flex flex-col gradient-purple-blue" style={{ overflow: 'hidden', width: '100vw', height: '100vh' }}>
+    <div className="h-screen flex flex-col gradient-purple-blue bubbles-page" style={{ overflow: 'hidden', width: '100vw', height: '100vh' }}>
       {/* Bubbles Header */}
       <div className="gradient-primary-to-secondary text-white px-4 py-4 shadow-sm">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
@@ -447,7 +447,7 @@ export default function Bubbles() {
       <div className="flex-1 relative" style={{ overflow: 'hidden' }}>
         <div 
           ref={canvasRef}
-          className="absolute inset-0"
+          className="absolute inset-0 bubble-canvas"
           style={{
             backgroundImage: "radial-gradient(circle, rgba(139, 92, 246, 0.2) 1px, transparent 1px)",
             backgroundSize: "20px 20px",
