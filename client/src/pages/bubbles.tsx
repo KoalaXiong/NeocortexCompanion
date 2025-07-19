@@ -459,27 +459,23 @@ export default function Bubbles() {
 
   // Helper functions for connection management
   const addConnection = useCallback((connection: {id: string; from: number; to: number}) => {
-    console.log('ADDING CONNECTION:', connection, 'Current connections:', connections);
     setConnections(prev => {
       const updated = [...prev, connection];
       // Save to localStorage
       if (typeof window !== 'undefined' && id) {
         localStorage.setItem(`bubbleConnections_${id}`, JSON.stringify(updated));
       }
-      console.log('AFTER ADD, connections:', updated);
       return updated;
     });
   }, [connections, id]);
 
   const removeConnection = useCallback((connectionId: string) => {
-    console.log('REMOVING CONNECTION:', connectionId, 'Current connections:', connections);
     setConnections(prev => {
       const updated = prev.filter(conn => conn.id !== connectionId);
       // Save to localStorage
       if (typeof window !== 'undefined' && id) {
         localStorage.setItem(`bubbleConnections_${id}`, JSON.stringify(updated));
       }
-      console.log('AFTER REMOVE, connections:', updated);
       return updated;
     });
   }, [connections, id]);
@@ -487,12 +483,9 @@ export default function Bubbles() {
   const handleBubbleDoubleClick = (bubbleId: number) => {
     if (!isConnectMode) return;
     
-    console.log('DOUBLE CLICK BUBBLE:', bubbleId, 'Current connections before:', connections.length);
-    
     // Always allow selection/deselection with double-click, regardless of existing connections
     if (selectedBubbles.includes(bubbleId)) {
       // Deselect if already selected
-      console.log('DESELECTING bubble:', bubbleId);
       setSelectedBubbles(prev => prev.filter(id => id !== bubbleId));
       return;
     }
@@ -541,12 +534,9 @@ export default function Bubbles() {
   };
 
   const renderConnections = () => {
-    console.log('RENDERING CONNECTIONS, total:', connections.length, 'connections:', connections);
     return connections.map(connection => {
       const fromBubble = bubbles.find(b => b.id === connection.from);
       const toBubble = bubbles.find(b => b.id === connection.to);
-      
-      console.log('Processing connection:', connection.id, 'fromBubble:', fromBubble?.id, 'toBubble:', toBubble?.id);
       
       if (!fromBubble || !toBubble) return null;
       

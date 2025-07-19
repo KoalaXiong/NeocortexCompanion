@@ -119,11 +119,17 @@ export default function BubbleCard({
     });
   };
 
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const handleClick = (e: React.MouseEvent) => {
     if (isConnectMode && onBubbleClick) {
       e.preventDefault();
       e.stopPropagation();
-      onBubbleClick(bubble.id);
+      
+      // Delay the click handler to see if a double-click follows
+      clickTimeoutRef.current = setTimeout(() => {
+        onBubbleClick(bubble.id);
+      }, 300); // 300ms delay to detect double-click
     }
   };
 
@@ -131,6 +137,13 @@ export default function BubbleCard({
     if (isConnectMode && onBubbleDoubleClick) {
       e.preventDefault();
       e.stopPropagation();
+      
+      // Clear the pending single-click handler
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+        clickTimeoutRef.current = null;
+      }
+      
       onBubbleDoubleClick(bubble.id);
     }
   };
