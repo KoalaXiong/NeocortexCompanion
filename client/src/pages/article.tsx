@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save, Eye, FileDown, Tag, Bold, Italic, Underline, List, ListOrdered, Type, Minus, Undo, Redo, Hash } from "lucide-react";
+import { ArrowLeft, Save, Eye, FileDown, Tag, Bold, Italic, Underline, List, ListOrdered, Type, Minus, Undo, Redo, Hash, Download } from "lucide-react";
 import BubbleCard from "@/components/bubble-card";
 import PDFPreviewModal from "@/components/pdf-preview-modal";
 import { generatePDF } from "@/lib/pdf-generator";
@@ -60,21 +60,40 @@ export default function ArticlePage() {
     }
   }, [conversation?.name, articleTitle]);
 
-  // Load existing article draft if available
+  // Load existing article draft from localStorage first, then database if available
   useEffect(() => {
-    if (existingArticles.length > 0 && !articleContent) {
-      const latestArticle = existingArticles
-        .filter(article => article.title.includes(conversation?.name || ''))
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
-      
-      if (latestArticle) {
-        setArticleTitle(latestArticle.title);
-        setArticleContent(latestArticle.content);
-        setUsedBubbles(latestArticle.bubbleIds);
-        setCurrentArticleId(latestArticle.id);
+    if (!articleContent && id) {
+      // Try to load from localStorage first
+      try {
+        const latestDraft = localStorage.getItem('latest_article_draft');
+        if (latestDraft) {
+          const draft = JSON.parse(latestDraft);
+          if (draft.conversationId === id && draft.title && draft.content) {
+            setArticleTitle(draft.title);
+            setArticleContent(draft.content);
+            setAutoSaveStatus('saved');
+            return; // Don't load from database if we have a recent draft
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load draft from localStorage:', error);
+      }
+
+      // Fallback to database if no local draft
+      if (existingArticles.length > 0) {
+        const latestArticle = existingArticles
+          .filter(article => article.title.includes(conversation?.name || ''))
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
+        
+        if (latestArticle) {
+          setArticleTitle(latestArticle.title);
+          setArticleContent(latestArticle.content);
+          setUsedBubbles(latestArticle.bubbleIds);
+          setCurrentArticleId(latestArticle.id);
+        }
       }
     }
-  }, [existingArticles, articleContent, conversation?.name]);
+  }, [existingArticles, articleContent, conversation?.name, id]);
 
   // Save article mutation - update if exists, create if new
   const saveArticleMutation = useMutation({
@@ -93,7 +112,11 @@ export default function ArticlePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/articles"] });
-      alert("Article saved successfully!");
+      // Remove popup - manual save still shows success
+      setAutoSaveStatus('saved');
+    },
+    onError: () => {
+      setAutoSaveStatus('unsaved');
     },
   });
 
@@ -336,7 +359,7 @@ export default function ArticlePage() {
     setArticleContent(prev => prev + divider);
   };
 
-  // Auto-save functionality
+  // Auto-save to local storage functionality
   const triggerAutoSave = () => {
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current);
@@ -345,19 +368,31 @@ export default function ArticlePage() {
     setAutoSaveStatus('unsaved');
     
     autoSaveTimeoutRef.current = setTimeout(() => {
-      if (articleTitle.trim() && articleContent.trim()) {
+      if (articleTitle.trim() || articleContent.trim()) {
         setAutoSaveStatus('saving');
-        saveArticleMutation.mutate(
-          {
+        
+        try {
+          // Create text content for local storage
+          const textContent = articleContent.replace(/<[^>]*>/g, '\n').replace(/\n+/g, '\n').trim();
+          const fullContent = `${articleTitle}\n${'='.repeat(articleTitle.length)}\n\n${textContent}`;
+          
+          // Save to localStorage as temporary file
+          const timestamp = new Date().toISOString();
+          const saveKey = `article_draft_${id}_${timestamp.slice(0, 19).replace(/:/g, '-')}`;
+          
+          localStorage.setItem(saveKey, fullContent);
+          localStorage.setItem('latest_article_draft', JSON.stringify({
             title: articleTitle,
             content: articleContent,
-            bubbleIds: usedBubbles,
-          },
-          {
-            onSuccess: () => setAutoSaveStatus('saved'),
-            onError: () => setAutoSaveStatus('unsaved')
-          }
-        );
+            timestamp,
+            conversationId: id
+          }));
+          
+          setAutoSaveStatus('saved');
+        } catch (error) {
+          console.error('Auto-save failed:', error);
+          setAutoSaveStatus('unsaved');
+        }
       }
     }, 2000); // Auto-save after 2 seconds of inactivity
   };
@@ -407,6 +442,23 @@ export default function ArticlePage() {
     setShowPDFPreview(false);
   };
 
+  const handleDownloadText = () => {
+    // Create plain text version
+    const textContent = articleContent.replace(/<[^>]*>/g, '\n').replace(/\n+/g, '\n').trim();
+    const fullContent = `${articleTitle}\n${'='.repeat(articleTitle.length)}\n\n${textContent}`;
+    
+    // Create and download text file
+    const blob = new Blob([fullContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${(conversation?.name || articleTitle).replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-50">
@@ -443,11 +495,15 @@ export default function ArticlePage() {
               variant="ghost"
             >
               <Save className="mr-2 h-4 w-4" />
-              Save Draft
+              Save to Database
             </Button>
             <Button variant="outline">
               <Eye className="mr-2 h-4 w-4" />
               Preview
+            </Button>
+            <Button onClick={handleDownloadText} variant="outline">
+              <Download className="mr-2 h-4 w-4" />
+              Download TXT
             </Button>
             <Button onClick={handleExportPDF}>
               <FileDown className="mr-2 h-4 w-4" />
