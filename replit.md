@@ -137,6 +137,13 @@ The application uses four main tables:
   - Fixed double-click event handling using flag-based approach to prevent accidental disconnections
   - Resolved setTimeout/clearTimeout timing issues with more robust double-click detection
 
+- **January 19, 2025**: Implemented connection-aware align functionality
+  - Align button now prioritizes connected bubbles, placing them at the top in connection order
+  - Connection chains are followed from starting points (bubbles with outgoing but no incoming connections)
+  - Creates logical flow diagrams when align is used after creating connections
+  - Unconnected bubbles are placed after connected chains
+  - Falls back to spatial sorting when no connections exist
+
 - **January 16, 2025**: Moved category selection dropdown to keyword area
   - Category selection dropdown now positioned next to keyword input for better workflow
   - Gray tag icon for empty categories opens full category selection menu

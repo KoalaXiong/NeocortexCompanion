@@ -400,20 +400,100 @@ export default function Bubbles() {
     // Calculate optimal size for current bubble count
     const { width: bubbleWidth, height: bubbleHeight } = calculateOptimalBubbleSize(bubbles.length);
 
-    // Sort bubbles by their current spatial position to preserve user arrangement
-    // Sort by column first (x position), then by row (y position)
-    const spatialSortedBubbles = [...bubbles].sort((a, b) => {
-      // Group into columns based on x position (with some tolerance for alignment)
-      const columnA = Math.round(a.x / 300); // Approximate column based on x position
-      const columnB = Math.round(b.x / 300);
-      
-      if (columnA !== columnB) {
-        return columnA - columnB; // Sort by column first
-      }
-      
-      // Within same column, sort by y position (top to bottom)
-      return a.y - b.y;
-    });
+    // Connection-aware sorting: put connected bubbles at top in connection order
+    const getConnectionOrderedBubbles = () => {
+      const visited = new Set<number>();
+      const ordered: typeof bubbles = [];
+      const unconnected: typeof bubbles = [];
+
+      // Find all connection chains and order them by creation time
+      const connectionChains: typeof bubbles[] = [];
+
+      // Function to follow a connection chain from a starting bubble
+      const buildChain = (startBubbleId: number, chain: typeof bubbles = []): typeof bubbles => {
+        if (visited.has(startBubbleId)) return chain;
+        
+        const bubble = bubbles.find(b => b.id === startBubbleId);
+        if (!bubble) return chain;
+        
+        visited.add(startBubbleId);
+        chain.push(bubble);
+
+        // Find the next bubble in the chain (most recent outgoing connection)
+        const outgoingConnections = connections
+          .filter(conn => conn.from === startBubbleId)
+          .sort((a, b) => {
+            // Sort by timestamp in connection ID (creation order)
+            const aTime = parseInt(a.id.split('-').pop() || '0');
+            const bTime = parseInt(b.id.split('-').pop() || '0');
+            return aTime - bTime;
+          });
+
+        // Follow the chain by taking the first (earliest) connection
+        if (outgoingConnections.length > 0) {
+          const nextBubbleId = outgoingConnections[0].to;
+          return buildChain(nextBubbleId, chain);
+        }
+
+        return chain;
+      };
+
+      // Find starting points for chains (bubbles with outgoing but no incoming connections)
+      const startingBubbles = bubbles.filter(bubble => {
+        const hasIncoming = connections.some(conn => conn.to === bubble.id);
+        const hasOutgoing = connections.some(conn => conn.from === bubble.id);
+        return hasOutgoing && !hasIncoming;
+      });
+
+      // Build chains from starting points
+      startingBubbles.forEach(startBubble => {
+        if (!visited.has(startBubble.id)) {
+          const chain = buildChain(startBubble.id);
+          if (chain.length > 0) {
+            connectionChains.push(chain);
+          }
+        }
+      });
+
+      // Add any remaining connected bubbles that weren't captured in chains
+      const remainingConnected = bubbles.filter(bubble => {
+        const isConnected = connections.some(conn => conn.from === bubble.id || conn.to === bubble.id);
+        return isConnected && !visited.has(bubble.id);
+      });
+
+      remainingConnected.forEach(bubble => {
+        if (!visited.has(bubble.id)) {
+          const chain = buildChain(bubble.id);
+          if (chain.length > 0) {
+            connectionChains.push(chain);
+          }
+        }
+      });
+
+      // Flatten all chains in order
+      connectionChains.forEach(chain => {
+        ordered.push(...chain);
+      });
+
+      // Add unconnected bubbles at the end
+      bubbles.forEach(bubble => {
+        if (!visited.has(bubble.id)) {
+          unconnected.push(bubble);
+        }
+      });
+
+      return [...ordered, ...unconnected];
+    };
+
+    // Get sorted bubbles (connection-aware if connections exist, otherwise spatial)
+    const sortedBubbles = connections.length > 0 
+      ? getConnectionOrderedBubbles()
+      : [...bubbles].sort((a, b) => {
+          const columnA = Math.round(a.x / 300);
+          const columnB = Math.round(b.x / 300);
+          if (columnA !== columnB) return columnA - columnB;
+          return a.y - b.y;
+        });
 
     // Calculate max rows that fit in visible space
     const availableHeight = window.innerHeight - 220;
@@ -422,12 +502,11 @@ export default function Bubbles() {
     let currentColumn = 0;
     let currentRow = 0;
 
-    // Align all bubbles to grid positions maintaining spatial sequence
-    spatialSortedBubbles.forEach((bubble) => {
+    // Align all bubbles to grid positions in connection order
+    sortedBubbles.forEach((bubble) => {
       const x = startX + currentColumn * (bubbleWidth + gapX);
       const y = startY + currentRow * (bubbleHeight + gapY);
 
-      // Update bubble position and size
       updateBubbleMutation.mutate({
         bubbleId: bubble.id,
         x: x,
@@ -444,7 +523,10 @@ export default function Bubbles() {
       }
     });
 
-    alert("Bubbles aligned to grid layout preserving your arrangement!");
+    const message = connections.length > 0 
+      ? "Bubbles aligned with connected bubbles at the top in connection order!"
+      : "Bubbles aligned to grid layout preserving your arrangement!";
+    alert(message);
   };
 
   const handleConnectMode = () => {
