@@ -14,11 +14,17 @@ export default function Bubbles() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   
-  // Connection state - using useRef to persist across re-renders
+  // Connection state - using localStorage to persist across re-renders and page reloads
   const [isConnectMode, setIsConnectMode] = useState(false);
   const [selectedBubbles, setSelectedBubbles] = useState<number[]>([]);
-  const connectionsRef = useRef<Array<{id: string; from: number; to: number}>>([]);
-  const [, setConnectionsRender] = useState(0); // Force re-render when connections change
+  const [connections, setConnections] = useState<Array<{id: string; from: number; to: number}>>(() => {
+    // Load connections from localStorage on component mount
+    if (typeof window !== 'undefined' && id) {
+      const stored = localStorage.getItem(`bubbleConnections_${id}`);
+      return stored ? JSON.parse(stored) : [];
+    }
+    return [];
+  });
 
   const { data: bubbles = [], isLoading } = useQuery<BubbleWithMessage[]>({
     queryKey: ["/api/conversations", id, "bubbles"],
@@ -453,23 +459,35 @@ export default function Bubbles() {
 
   // Helper functions for connection management
   const addConnection = useCallback((connection: {id: string; from: number; to: number}) => {
-    console.log('ADDING CONNECTION:', connection, 'Current connections:', connectionsRef.current);
-    connectionsRef.current = [...connectionsRef.current, connection];
-    console.log('AFTER ADD, connections:', connectionsRef.current);
-    setConnectionsRender(prev => prev + 1);
-  }, []);
+    console.log('ADDING CONNECTION:', connection, 'Current connections:', connections);
+    setConnections(prev => {
+      const updated = [...prev, connection];
+      // Save to localStorage
+      if (typeof window !== 'undefined' && id) {
+        localStorage.setItem(`bubbleConnections_${id}`, JSON.stringify(updated));
+      }
+      console.log('AFTER ADD, connections:', updated);
+      return updated;
+    });
+  }, [connections, id]);
 
   const removeConnection = useCallback((connectionId: string) => {
-    console.log('REMOVING CONNECTION:', connectionId, 'Current connections:', connectionsRef.current);
-    connectionsRef.current = connectionsRef.current.filter(conn => conn.id !== connectionId);
-    console.log('AFTER REMOVE, connections:', connectionsRef.current);
-    setConnectionsRender(prev => prev + 1);
-  }, []);
+    console.log('REMOVING CONNECTION:', connectionId, 'Current connections:', connections);
+    setConnections(prev => {
+      const updated = prev.filter(conn => conn.id !== connectionId);
+      // Save to localStorage
+      if (typeof window !== 'undefined' && id) {
+        localStorage.setItem(`bubbleConnections_${id}`, JSON.stringify(updated));
+      }
+      console.log('AFTER REMOVE, connections:', updated);
+      return updated;
+    });
+  }, [connections, id]);
 
   const handleBubbleDoubleClick = (bubbleId: number) => {
     if (!isConnectMode) return;
     
-    console.log('DOUBLE CLICK BUBBLE:', bubbleId, 'Current connections before:', connectionsRef.current.length);
+    console.log('DOUBLE CLICK BUBBLE:', bubbleId, 'Current connections before:', connections.length);
     
     // Always allow selection/deselection with double-click, regardless of existing connections
     if (selectedBubbles.includes(bubbleId)) {
@@ -488,7 +506,7 @@ export default function Bubbles() {
       const toBubble = bubbleId;
       
       // Check if this exact connection already exists
-      const connectionExists = connectionsRef.current.some(
+      const connectionExists = connections.some(
         conn => (conn.from === fromBubble && conn.to === toBubble) || 
                 (conn.from === toBubble && conn.to === fromBubble)
       );
@@ -513,7 +531,7 @@ export default function Bubbles() {
     if (!isConnectMode) return;
     
     // Single click only disconnects existing connections
-    const existingConnection = connectionsRef.current.find(
+    const existingConnection = connections.find(
       conn => conn.from === bubbleId || conn.to === bubbleId
     );
     
@@ -523,8 +541,8 @@ export default function Bubbles() {
   };
 
   const renderConnections = () => {
-    console.log('RENDERING CONNECTIONS, total:', connectionsRef.current.length, 'connections:', connectionsRef.current);
-    return connectionsRef.current.map(connection => {
+    console.log('RENDERING CONNECTIONS, total:', connections.length, 'connections:', connections);
+    return connections.map(connection => {
       const fromBubble = bubbles.find(b => b.id === connection.from);
       const toBubble = bubbles.find(b => b.id === connection.to);
       

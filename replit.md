@@ -131,6 +131,8 @@ The application uses four main tables:
   - Connection mode disables dragging to prevent accidental movement during selection
   - Fixed click behavior: single click only disconnects, double click only creates connections
   - Clear separation between connection creation (double-click) and disconnection (single click)
+  - Fixed connection persistence by storing connections in localStorage instead of component state
+  - Connections now survive component re-renders and page reloads
 
 - **January 16, 2025**: Moved category selection dropdown to keyword area
   - Category selection dropdown now positioned next to keyword input for better workflow
