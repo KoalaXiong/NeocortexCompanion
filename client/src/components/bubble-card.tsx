@@ -13,9 +13,22 @@ interface BubbleCardProps {
   onCategoryChange?: (bubbleId: number, category: string) => void;
   onTitleChange?: (bubbleId: number, title: string) => void;
   isCompact?: boolean; // Whether bubble is in compact mode
+  isConnectMode?: boolean; // Whether connection mode is active
+  isSelected?: boolean; // Whether bubble is selected for connection
+  onBubbleClick?: (bubbleId: number) => void; // Handle bubble click in connect mode
 }
 
-export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryChange, onTitleChange, isCompact = false }: BubbleCardProps) {
+export default function BubbleCard({ 
+  bubble, 
+  onMove, 
+  onColorChange, 
+  onCategoryChange, 
+  onTitleChange, 
+  isCompact = false,
+  isConnectMode = false,
+  isSelected = false,
+  onBubbleClick 
+}: BubbleCardProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: bubble.x, y: bubble.y });
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -91,6 +104,14 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
+    
+    // Handle connect mode clicks
+    if (isConnectMode && onBubbleClick) {
+      e.stopPropagation();
+      onBubbleClick(bubble.id);
+      return;
+    }
+    
     setIsDragging(true);
     setDragOffset({
       x: e.clientX - position.x,
@@ -168,8 +189,12 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
   return (
     <Card
       ref={cardRef}
-      className={`absolute cursor-move transition-all duration-200 border-2 ${colorClasses.border} ${
+      className={`absolute transition-all duration-200 border-2 ${colorClasses.border} ${
         isDragging ? 'scale-105 shadow-2xl' : isHovered ? 'shadow-xl scale-105' : 'hover:shadow-lg'
+      } ${
+        isConnectMode ? 'cursor-pointer' : 'cursor-move'
+      } ${
+        isSelected ? 'ring-4 ring-purple-400 ring-opacity-50' : ''
       }`}
       style={{
         left: position.x,
@@ -177,7 +202,7 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
         width: currentWidth,
         height: currentHeight,
         userSelect: 'none',
-        zIndex: isDragging ? 1000 : isHovered ? 100 : 1,
+        zIndex: isDragging ? 1000 : isHovered ? 100 : isSelected ? 50 : 1,
       }}
       onMouseDown={handleMouseDown}
       onMouseEnter={() => setIsHovered(true)}

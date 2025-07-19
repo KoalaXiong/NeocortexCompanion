@@ -13,6 +13,11 @@ export default function Bubbles() {
   const [, setLocation] = useLocation();
   const canvasRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+  
+  // Connection state
+  const [isConnectMode, setIsConnectMode] = useState(false);
+  const [selectedBubbles, setSelectedBubbles] = useState<number[]>([]);
+  const [connections, setConnections] = useState<Array<{id: string; from: number; to: number}>>([]);
 
   const { data: bubbles = [], isLoading } = useQuery<BubbleWithMessage[]>({
     queryKey: ["/api/conversations", id, "bubbles"],
@@ -435,6 +440,106 @@ export default function Bubbles() {
     alert("Bubbles aligned to grid layout preserving your arrangement!");
   };
 
+  const handleConnectMode = () => {
+    setIsConnectMode(!isConnectMode);
+    setSelectedBubbles([]);
+    if (!isConnectMode) {
+      alert("Connection mode activated! Click two bubbles to connect them.");
+    } else {
+      alert("Connection mode deactivated.");
+    }
+  };
+
+  const handleBubbleClick = (bubbleId: number) => {
+    if (!isConnectMode) return;
+    
+    if (selectedBubbles.includes(bubbleId)) {
+      // Deselect if already selected
+      setSelectedBubbles(prev => prev.filter(id => id !== bubbleId));
+      return;
+    }
+    
+    if (selectedBubbles.length === 0) {
+      // Select first bubble
+      setSelectedBubbles([bubbleId]);
+    } else if (selectedBubbles.length === 1) {
+      // Select second bubble and create connection
+      const fromBubble = selectedBubbles[0];
+      const toBubble = bubbleId;
+      
+      // Check if connection already exists
+      const connectionExists = connections.some(
+        conn => (conn.from === fromBubble && conn.to === toBubble) || 
+                (conn.from === toBubble && conn.to === fromBubble)
+      );
+      
+      if (!connectionExists) {
+        const newConnection = {
+          id: `${fromBubble}-${toBubble}`,
+          from: fromBubble,
+          to: toBubble
+        };
+        setConnections(prev => [...prev, newConnection]);
+        alert("Bubbles connected!");
+      } else {
+        alert("Connection already exists between these bubbles.");
+      }
+      
+      setSelectedBubbles([]);
+    } else {
+      // Reset selection if more than 2 somehow
+      setSelectedBubbles([bubbleId]);
+    }
+  };
+
+  const renderConnections = () => {
+    return connections.map(connection => {
+      const fromBubble = bubbles.find(b => b.id === connection.from);
+      const toBubble = bubbles.find(b => b.id === connection.to);
+      
+      if (!fromBubble || !toBubble) return null;
+      
+      // Calculate center points of bubbles
+      const fromX = fromBubble.x + fromBubble.width / 2;
+      const fromY = fromBubble.y + fromBubble.height / 2;
+      const toX = toBubble.x + toBubble.width / 2;
+      const toY = toBubble.y + toBubble.height / 2;
+      
+      return (
+        <svg
+          key={connection.id}
+          className="absolute inset-0 pointer-events-none"
+          style={{ zIndex: 0 }}
+        >
+          <line
+            x1={fromX}
+            y1={fromY}
+            x2={toX}
+            y2={toY}
+            stroke="#8B5CF6"
+            strokeWidth="2"
+            strokeDasharray="5,5"
+            opacity="0.7"
+          />
+          <circle
+            cx={fromX}
+            cy={fromY}
+            r="4"
+            fill="#8B5CF6"
+            opacity="0.8"
+          />
+          <circle
+            cx={toX}
+            cy={toY}
+            r="4"
+            fill="#8B5CF6"
+            opacity="0.8"
+          />
+        </svg>
+      );
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50">
@@ -519,6 +624,9 @@ export default function Bubbles() {
             maxHeight: "100%"
           }}
         >
+          {/* Render connections behind bubbles */}
+          {renderConnections()}
+          
           {bubbles.length === 0 ? (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
@@ -534,6 +642,7 @@ export default function Bubbles() {
               // Check if this bubble is in compact mode based on its size
               const normalWidth = 280;
               const isCompactMode = bubble.width < normalWidth;
+              const isSelected = selectedBubbles.includes(bubble.id);
               
               return (
                 <BubbleCard
@@ -544,6 +653,9 @@ export default function Bubbles() {
                   onCategoryChange={handleBubbleCategoryChange}
                   onTitleChange={handleBubbleTitleChange}
                   isCompact={isCompactMode}
+                  isConnectMode={isConnectMode}
+                  isSelected={isSelected}
+                  onBubbleClick={handleBubbleClick}
                 />
               );
             })
@@ -562,9 +674,15 @@ export default function Bubbles() {
             <Grid3X3 className="h-5 w-5" />
           </Button>
           <Button
+            onClick={handleConnectMode}
             size="sm"
-            className="bg-white bubble-shadow rounded-2xl p-3 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
+            className={`bubble-shadow rounded-2xl p-3 hover:bubble-shadow-lg ${
+              isConnectMode 
+                ? 'bg-purple-500 text-white' 
+                : 'bg-white text-gray-600 hover:text-primary'
+            }`}
             variant="ghost"
+            title="Connect bubbles to show relationships"
           >
             <LinkIcon className="h-5 w-5" />
           </Button>

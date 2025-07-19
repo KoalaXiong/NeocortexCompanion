@@ -117,6 +117,10 @@ The application uses four main tables:
   - Replaced floating "+" button with Grid align button for organizing manually moved bubbles
   - Align function preserves current spatial arrangement sequence instead of reverting to keyword grouping
   - Spatial sorting maintains user's manual layout decisions while applying clean grid positioning
+  - Implemented connect bubbles functionality with visual connection lines
+  - Click link button to enter connection mode, then click two bubbles to connect them
+  - Visual connections shown as purple dashed lines with connection points
+  - Selected bubbles highlighted with purple ring in connection mode
 
 - **January 16, 2025**: Moved category selection dropdown to keyword area
   - Category selection dropdown now positioned next to keyword input for better workflow
