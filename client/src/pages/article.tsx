@@ -407,7 +407,7 @@ export default function ArticlePage() {
                         const tagContent = tag.bubbleIds
                           .map(bubbleId => {
                             const bubble = bubbles.find(b => b.id === bubbleId);
-                            return bubble ? bubble.content : '';
+                            return bubble ? bubble.message.text : '';
                           })
                           .filter(content => content)
                           .map(content => `<p class="mb-4">${content}</p>`)
