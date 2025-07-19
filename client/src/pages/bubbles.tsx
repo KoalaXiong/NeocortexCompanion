@@ -453,6 +453,11 @@ export default function Bubbles() {
   const handleBubbleDoubleClick = (bubbleId: number) => {
     if (!isConnectMode) return;
     
+    // Check if this bubble has existing connections - preserve them
+    const hasExistingConnections = connections.some(
+      conn => conn.from === bubbleId || conn.to === bubbleId
+    );
+    
     // Always allow selection/deselection with double-click, regardless of existing connections
     if (selectedBubbles.includes(bubbleId)) {
       // Deselect if already selected
@@ -461,14 +466,14 @@ export default function Bubbles() {
     }
     
     if (selectedBubbles.length === 0) {
-      // Select first bubble
+      // Select first bubble (preserve existing connections)
       setSelectedBubbles([bubbleId]);
     } else if (selectedBubbles.length === 1) {
       // Select second bubble and create connection
       const fromBubble = selectedBubbles[0];
       const toBubble = bubbleId;
       
-      // Check if connection already exists
+      // Check if this exact connection already exists
       const connectionExists = connections.some(
         conn => (conn.from === fromBubble && conn.to === toBubble) || 
                 (conn.from === toBubble && conn.to === fromBubble)
@@ -480,6 +485,7 @@ export default function Bubbles() {
           from: fromBubble,
           to: toBubble
         };
+        // Add new connection without affecting existing ones
         setConnections(prev => [...prev, newConnection]);
       }
       
