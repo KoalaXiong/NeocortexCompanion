@@ -245,8 +245,21 @@ export default function ArticlePage() {
       if (!visited.has(startBubble.id)) {
         const chainIds = buildChain(startBubble.id);
         if (chainIds.length > 1) { // Only create tag for chains with multiple bubbles
-          const firstBubble = bubbles.find(b => b.id === chainIds[0]);
-          const tagName = firstBubble?.title || `Connection ${chainIds[0]}`;
+          // Find the first non-empty keyword in the connection chain
+          let tagName = '';
+          for (const bubbleId of chainIds) {
+            const bubble = bubbles.find(b => b.id === bubbleId);
+            if (bubble?.title && bubble.title.trim()) {
+              tagName = bubble.title;
+              break;
+            }
+          }
+          
+          // If no keywords found, use generic group name
+          if (!tagName) {
+            tagName = `Group No.${tags.length + 1}`;
+          }
+          
           const colors = ["blue", "green", "purple", "orange", "red"];
           const tagColor = colors[tags.length % colors.length];
           
