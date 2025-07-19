@@ -60,6 +60,44 @@ export default function ArticlePage() {
     }
   }, [conversation?.name, articleTitle]);
 
+  // Update editor content when articleContent changes (for bubble drops and loading)
+  useEffect(() => {
+    if (editorRef.current && editorRef.current.innerHTML !== articleContent) {
+      const selection = window.getSelection();
+      const hadFocus = document.activeElement === editorRef.current;
+      
+      // Save cursor position if editor has focus
+      let cursorPos = null;
+      if (hadFocus && selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        cursorPos = {
+          startContainer: range.startContainer,
+          startOffset: range.startOffset,
+          endContainer: range.endContainer,
+          endOffset: range.endOffset
+        };
+      }
+
+      // Update content
+      editorRef.current.innerHTML = articleContent;
+      
+      // Restore cursor position if it was focused
+      if (hadFocus && cursorPos) {
+        try {
+          const newRange = document.createRange();
+          newRange.setStart(cursorPos.startContainer, cursorPos.startOffset);
+          newRange.setEnd(cursorPos.endContainer, cursorPos.endOffset);
+          selection?.removeAllRanges();
+          selection?.addRange(newRange);
+          editorRef.current.focus();
+        } catch (e) {
+          // If cursor restoration fails, just focus at the end
+          editorRef.current.focus();
+        }
+      }
+    }
+  }, [articleContent]);
+
   // Load existing article draft from localStorage first, then database if available
   useEffect(() => {
     if (!articleContent && id) {
@@ -322,12 +360,60 @@ export default function ArticlePage() {
     updateWordCount(articleContent);
   }, [articleContent]);
 
+  // Helper function to save cursor position
+  const saveCursorPosition = () => {
+    const selection = window.getSelection();
+    if (!selection || !editorRef.current) return null;
+    
+    const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+    if (!range) return null;
+
+    return {
+      startContainer: range.startContainer,
+      startOffset: range.startOffset,
+      endContainer: range.endContainer,
+      endOffset: range.endOffset
+    };
+  };
+
+  // Helper function to restore cursor position
+  const restoreCursorPosition = (cursorPos: any) => {
+    if (!cursorPos || !editorRef.current) return;
+
+    try {
+      const selection = window.getSelection();
+      if (!selection) return;
+
+      const range = document.createRange();
+      range.setStart(cursorPos.startContainer, cursorPos.startOffset);
+      range.setEnd(cursorPos.endContainer, cursorPos.endOffset);
+      
+      selection.removeAllRanges();
+      selection.addRange(range);
+    } catch (error) {
+      // Fallback: place cursor at end
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(editorRef.current);
+      range.collapse(false);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
+  };
+
   // Formatting functions
   const applyFormat = (command: string, value?: string) => {
+    const cursorPos = saveCursorPosition();
     document.execCommand(command, false, value);
     if (editorRef.current) {
-      editorRef.current.focus();
-      setArticleContent(editorRef.current.innerHTML);
+      const newContent = editorRef.current.innerHTML;
+      setArticleContent(newContent);
+      
+      // Small delay to ensure DOM updates, then restore cursor
+      setTimeout(() => {
+        restoreCursorPosition(cursorPos);
+        editorRef.current?.focus();
+      }, 0);
     }
   };
 
@@ -831,16 +917,8 @@ export default function ArticlePage() {
                   outline: 'none'
                 }}
               >
-                {articleContent ? (
-                  <div 
-                    dangerouslySetInnerHTML={{ __html: articleContent }} 
-                    style={{ 
-                      margin: '0',
-                      padding: '0'
-                    }}
-                  />
-                ) : (
-                  <div className="text-gray-500 italic">
+                {!articleContent && (
+                  <div className="text-gray-500 italic pointer-events-none">
                     Start writing your article or drag bubbles from the sidebar...
                   </div>
                 )}
