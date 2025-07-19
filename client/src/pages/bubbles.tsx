@@ -92,21 +92,27 @@ export default function Bubbles() {
   const calculateOptimalBubbleSize = (totalBubbles: number) => {
     if (totalBubbles === 0) return { width: 280, height: 120, isCompact: false };
     
-    const availableWidth = window.innerWidth - 60; // Account for margins and potential scrollbar
-    const availableHeight = window.innerHeight - 220; // Account for header and bottom space
-    const gapX = 20;
-    const gapY = 20;
+    // Get exact viewport dimensions
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    // Account for header (approximately 140px) and padding
+    const availableWidth = viewportWidth - 40; // 20px padding each side
+    const availableHeight = viewportHeight - 180; // 140px header + 40px padding
+    
+    const gapX = 15;
+    const gapY = 15;
     
     // Normal size
     const normalWidth = 280;
     const normalHeight = 120;
     
     // Calculate how many bubbles can fit at normal size
-    const maxColsNormal = Math.floor(availableWidth / (normalWidth + gapX));
-    const maxRowsNormal = Math.floor(availableHeight / (normalHeight + gapY));
+    const maxColsNormal = Math.floor((availableWidth + gapX) / (normalWidth + gapX));
+    const maxRowsNormal = Math.floor((availableHeight + gapY) / (normalHeight + gapY));
     const maxBubblesNormal = maxColsNormal * maxRowsNormal;
     
-    if (totalBubbles <= maxBubblesNormal) {
+    if (totalBubbles <= maxBubblesNormal && maxBubblesNormal > 0) {
       return {
         width: normalWidth,
         height: normalHeight,
@@ -114,18 +120,19 @@ export default function Bubbles() {
       };
     }
     
-    // Need compact mode - calculate exact grid dimensions
-    const idealCols = Math.ceil(Math.sqrt(totalBubbles * (availableWidth / availableHeight)));
-    const actualCols = Math.max(1, Math.min(idealCols, Math.floor(availableWidth / (120 + gapX))));
+    // Calculate optimal grid for compact mode
+    const aspectRatio = availableWidth / availableHeight;
+    const idealCols = Math.ceil(Math.sqrt(totalBubbles * aspectRatio));
+    const actualCols = Math.max(1, Math.min(idealCols, Math.floor((availableWidth + gapX) / (100 + gapX))));
     const actualRows = Math.ceil(totalBubbles / actualCols);
     
     // Calculate exact dimensions to fit perfectly
     const compactWidth = Math.floor((availableWidth - (actualCols - 1) * gapX) / actualCols);
     const compactHeight = Math.floor((availableHeight - (actualRows - 1) * gapY) / actualRows);
     
-    // Ensure minimum dimensions
-    const finalWidth = Math.max(100, Math.min(compactWidth, 200));
-    const finalHeight = Math.max(50, Math.min(compactHeight, 100));
+    // Ensure reasonable minimum dimensions
+    const finalWidth = Math.max(80, Math.min(compactWidth, 250));
+    const finalHeight = Math.max(50, Math.min(compactHeight, 150));
     
     return {
       width: finalWidth,
@@ -267,8 +274,11 @@ export default function Bubbles() {
         return keyA.localeCompare(keyB);
       });
 
-      // Calculate positions for all bubbles - fill columns top to bottom
-      const maxRows = Math.floor((window.innerHeight - 200) / (bubbleHeight + gapY));
+      // Calculate grid layout to ensure everything fits in viewport
+      const viewportHeight = window.innerHeight;
+      const availableHeight = viewportHeight - 180; // Account for header
+      const maxRows = Math.floor((availableHeight + gapY) / (bubbleHeight + gapY));
+      
       let currentColumn = 0;
       let currentRow = 0;
       let bubbleIndex = 0;
@@ -375,7 +385,7 @@ export default function Bubbles() {
   }
 
   return (
-    <div className="h-screen flex flex-col gradient-purple-blue">
+    <div className="h-screen flex flex-col gradient-purple-blue" style={{ overflow: 'hidden', width: '100vw', height: '100vh' }}>
       {/* Bubbles Header */}
       <div className="gradient-primary-to-secondary text-white px-4 py-4 shadow-sm">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
@@ -434,17 +444,18 @@ export default function Bubbles() {
       </div>
 
       {/* Canvas Area */}
-      <div className="flex-1 relative overflow-hidden">
+      <div className="flex-1 relative" style={{ overflow: 'hidden' }}>
         <div 
           ref={canvasRef}
-          className="absolute inset-0 p-4 overflow-hidden"
+          className="absolute inset-0"
           style={{
             backgroundImage: "radial-gradient(circle, rgba(139, 92, 246, 0.2) 1px, transparent 1px)",
             backgroundSize: "20px 20px",
-            width: "100vw",
-            height: "calc(100vh - 140px)",
-            maxWidth: "100%",
-            maxHeight: "100%"
+            overflow: 'hidden',
+            width: '100%',
+            height: '100%',
+            padding: '10px',
+            boxSizing: 'border-box'
           }}
         >
           {bubbles.length === 0 ? (
