@@ -280,7 +280,7 @@ export default function ArticlePage() {
   const handleBubbleDrop = (bubbleId: number, bubbleText: string) => {
     setUsedBubbles(prev => [...prev, bubbleId]);
     
-    const newParagraph = `<p class="mb-4">${bubbleText}</p>`;
+    const newParagraph = `<p style="margin-bottom: 16px; line-height: 1.6;">${bubbleText}</p>`;
     setArticleContent(prev => prev + newParagraph);
   };
 
@@ -389,10 +389,10 @@ export default function ArticlePage() {
                             return bubble ? bubble.message.text : '';
                           })
                           .filter(content => content)
-                          .map(content => `<p class="mb-4">${content}</p>`)
+                          .map(content => `<p style="margin-bottom: 16px; line-height: 1.6;">${content}</p>`)
                           .join('');
                         
-                        const tagSection = `<h3 class="text-lg font-semibold mb-3">${tag.name}</h3>${tagContent}`;
+                        const tagSection = `<h3 style="font-size: 18px; font-weight: 600; margin-bottom: 12px; margin-top: 24px; color: #374151;">${tag.name}</h3>${tagContent}`;
                         setArticleContent(prev => prev + tagSection);
                       }}
                     >
@@ -520,14 +520,25 @@ export default function ArticlePage() {
               {/* Article Content */}
               <div 
                 ref={editorRef}
-                className="min-h-[400px] space-y-6"
+                className="min-h-[400px] p-6 border border-gray-200 rounded-lg bg-white shadow-sm"
                 contentEditable
                 suppressContentEditableWarning
                 onInput={(e) => setArticleContent(e.currentTarget.innerHTML)}
                 onBlur={(e) => setArticleContent(e.currentTarget.innerHTML)}
+                style={{
+                  lineHeight: '1.6',
+                  fontSize: '16px',
+                  fontFamily: 'system-ui, -apple-system, sans-serif'
+                }}
               >
                 {articleContent ? (
-                  <div dangerouslySetInnerHTML={{ __html: articleContent }} />
+                  <div 
+                    dangerouslySetInnerHTML={{ __html: articleContent }} 
+                    style={{ 
+                      margin: '0',
+                      padding: '0'
+                    }}
+                  />
                 ) : (
                   <div className="text-gray-500 italic">
                     Start writing your article or drag bubbles from the sidebar...
