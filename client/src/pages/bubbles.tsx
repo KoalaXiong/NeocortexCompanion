@@ -444,7 +444,7 @@ export default function Bubbles() {
     setIsConnectMode(!isConnectMode);
     setSelectedBubbles([]);
     if (!isConnectMode) {
-      alert("Connection mode activated! Click two bubbles to connect them.");
+      alert("Connection mode activated! Double-click bubbles to select and connect them.");
     } else {
       alert("Connection mode deactivated.");
     }
@@ -453,19 +453,25 @@ export default function Bubbles() {
   const handleBubbleDoubleClick = (bubbleId: number) => {
     if (!isConnectMode) return;
     
+    console.log('Double click bubble:', bubbleId, 'Selected bubbles:', selectedBubbles.length);
+    
     if (selectedBubbles.includes(bubbleId)) {
       // Deselect if already selected
+      console.log('Deselecting bubble:', bubbleId);
       setSelectedBubbles(prev => prev.filter(id => id !== bubbleId));
       return;
     }
     
     if (selectedBubbles.length === 0) {
       // Select first bubble
+      console.log('Selecting first bubble:', bubbleId);
       setSelectedBubbles([bubbleId]);
     } else if (selectedBubbles.length === 1) {
       // Select second bubble and create connection
       const fromBubble = selectedBubbles[0];
       const toBubble = bubbleId;
+      
+      console.log('Creating connection from', fromBubble, 'to', toBubble);
       
       // Check if connection already exists
       const connectionExists = connections.some(
@@ -479,12 +485,22 @@ export default function Bubbles() {
           from: fromBubble,
           to: toBubble
         };
-        setConnections(prev => [...prev, newConnection]);
+        console.log('Adding new connection:', newConnection);
+        setConnections(prev => {
+          const updated = [...prev, newConnection];
+          console.log('Updated connections:', updated);
+          return updated;
+        });
+        alert(`Connected bubble ${fromBubble} to bubble ${toBubble}!`);
+      } else {
+        console.log('Connection already exists');
+        alert('Connection already exists between these bubbles!');
       }
       
       setSelectedBubbles([]);
     } else {
       // Reset selection if more than 2 somehow
+      console.log('Resetting selection, too many selected');
       setSelectedBubbles([bubbleId]);
     }
   };
