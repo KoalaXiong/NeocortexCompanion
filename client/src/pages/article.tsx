@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save, Eye, FileDown, Tag } from "lucide-react";
+import { ArrowLeft, Save, Eye, FileDown, Tag, Bold, Italic, Underline, List, ListOrdered, Type, Minus, Undo, Redo, Hash } from "lucide-react";
 import BubbleCard from "@/components/bubble-card";
 import PDFPreviewModal from "@/components/pdf-preview-modal";
 import { generatePDF } from "@/lib/pdf-generator";
@@ -22,8 +22,11 @@ export default function ArticlePage() {
   const [usedBubbles, setUsedBubbles] = useState<number[]>([]);
   const [currentArticleId, setCurrentArticleId] = useState<number | null>(null);
   const [sortMode, setSortMode] = useState<'connection' | 'original' | 'keyword'>('connection');
+  const [wordCount, setWordCount] = useState(0);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
   const editorRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Load connections from localStorage (same as bubble page)
   const [connections] = useState<Array<{id: string; from: number; to: number}>>(() => {
@@ -284,6 +287,103 @@ export default function ArticlePage() {
     setArticleContent(prev => prev + newParagraph);
   };
 
+  // Word count calculation
+  const updateWordCount = (content: string) => {
+    const textContent = content.replace(/<[^>]*>/g, '').trim();
+    const words = textContent ? textContent.split(/\s+/).length : 0;
+    setWordCount(words);
+  };
+
+  // Update word count when content changes
+  useEffect(() => {
+    updateWordCount(articleContent);
+  }, [articleContent]);
+
+  // Formatting functions
+  const applyFormat = (command: string, value?: string) => {
+    document.execCommand(command, false, value);
+    if (editorRef.current) {
+      editorRef.current.focus();
+      setArticleContent(editorRef.current.innerHTML);
+    }
+  };
+
+  const insertHeading = (level: number) => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const selectedText = range.toString() || 'Heading';
+      
+      const heading = document.createElement(`h${level}`);
+      heading.style.fontWeight = '600';
+      heading.style.marginBottom = '12px';
+      heading.style.marginTop = '24px';
+      heading.style.fontSize = level === 1 ? '24px' : level === 2 ? '20px' : '18px';
+      heading.style.color = '#374151';
+      heading.textContent = selectedText;
+      
+      range.deleteContents();
+      range.insertNode(heading);
+      
+      if (editorRef.current) {
+        setArticleContent(editorRef.current.innerHTML);
+      }
+    }
+  };
+
+  const insertDivider = () => {
+    const divider = '<hr style="margin: 24px 0; border: none; border-top: 2px solid #e5e7eb; width: 100%;">';
+    setArticleContent(prev => prev + divider);
+  };
+
+  // Auto-save functionality
+  const triggerAutoSave = () => {
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    setAutoSaveStatus('unsaved');
+    
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      if (articleTitle.trim() && articleContent.trim()) {
+        setAutoSaveStatus('saving');
+        saveArticleMutation.mutate(
+          {
+            title: articleTitle,
+            content: articleContent,
+            bubbleIds: usedBubbles,
+          },
+          {
+            onSuccess: () => setAutoSaveStatus('saved'),
+            onError: () => setAutoSaveStatus('unsaved')
+          }
+        );
+      }
+    }, 2000); // Auto-save after 2 seconds of inactivity
+  };
+
+  // Trigger auto-save when content changes
+  useEffect(() => {
+    if (articleContent || articleTitle) {
+      triggerAutoSave();
+    }
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [articleContent, articleTitle]);
+
+  // Auto-save status text
+  const getAutoSaveText = () => {
+    switch (autoSaveStatus) {
+      case 'saving': return 'Saving...';
+      case 'saved': return 'Auto-saved';
+      case 'unsaved': return 'Unsaved changes';
+      default: return 'Auto-saved';
+    }
+  };
+
   const handleSaveArticle = () => {
     saveArticleMutation.mutate({
       title: articleTitle,
@@ -353,6 +453,17 @@ export default function ArticlePage() {
               <FileDown className="mr-2 h-4 w-4" />
               Export PDF
             </Button>
+            
+            {/* Auto-save indicator */}
+            <div className={`flex items-center text-xs ${
+              autoSaveStatus === 'unsaved' ? 'text-orange-500' : 
+              autoSaveStatus === 'saving' ? 'text-blue-500' : 'text-gray-500'
+            }`}>
+              {autoSaveStatus === 'saving' && (
+                <div className="animate-spin rounded-full h-3 w-3 border border-current border-t-transparent mr-1"></div>
+              )}
+              {getAutoSaveText()}
+            </div>
           </div>
         </div>
       </div>
@@ -517,18 +628,151 @@ export default function ArticlePage() {
                 <p>Drag bubbles here to build your article</p>
               </div>
 
+              {/* Formatting Toolbar */}
+              <div className="flex flex-wrap items-center gap-1 p-3 bg-gray-50 border border-gray-200 rounded-t-lg border-b-0">
+                {/* Text Format */}
+                <div className="flex items-center gap-1 pr-2 border-r border-gray-300">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="p-2 h-8 w-8"
+                    onClick={() => applyFormat('bold')}
+                    title="Bold"
+                  >
+                    <Bold className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="p-2 h-8 w-8"
+                    onClick={() => applyFormat('italic')}
+                    title="Italic"
+                  >
+                    <Italic className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="p-2 h-8 w-8"
+                    onClick={() => applyFormat('underline')}
+                    title="Underline"
+                  >
+                    <Underline className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Headings */}
+                <div className="flex items-center gap-1 pr-2 border-r border-gray-300">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="px-2 h-8 text-xs"
+                    onClick={() => insertHeading(1)}
+                    title="Heading 1"
+                  >
+                    H1
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="px-2 h-8 text-xs"
+                    onClick={() => insertHeading(2)}
+                    title="Heading 2"
+                  >
+                    H2
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="px-2 h-8 text-xs"
+                    onClick={() => insertHeading(3)}
+                    title="Heading 3"
+                  >
+                    H3
+                  </Button>
+                </div>
+
+                {/* Lists */}
+                <div className="flex items-center gap-1 pr-2 border-r border-gray-300">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="p-2 h-8 w-8"
+                    onClick={() => applyFormat('insertUnorderedList')}
+                    title="Bullet List"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="p-2 h-8 w-8"
+                    onClick={() => applyFormat('insertOrderedList')}
+                    title="Numbered List"
+                  >
+                    <ListOrdered className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Insert Elements */}
+                <div className="flex items-center gap-1 pr-2 border-r border-gray-300">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="p-2 h-8 w-8"
+                    onClick={insertDivider}
+                    title="Insert Divider"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Undo/Redo */}
+                <div className="flex items-center gap-1 pr-2 border-r border-gray-300">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="p-2 h-8 w-8"
+                    onClick={() => applyFormat('undo')}
+                    title="Undo"
+                  >
+                    <Undo className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="p-2 h-8 w-8"
+                    onClick={() => applyFormat('redo')}
+                    title="Redo"
+                  >
+                    <Redo className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Word Count */}
+                <div className="flex items-center text-xs text-gray-500 pl-2">
+                  <Type className="h-3 w-3 mr-1" />
+                  {wordCount} words
+                </div>
+              </div>
+
               {/* Article Content */}
               <div 
                 ref={editorRef}
-                className="min-h-[400px] p-6 border border-gray-200 rounded-lg bg-white shadow-sm"
+                className="min-h-[400px] p-6 border border-gray-200 rounded-b-lg bg-white shadow-sm border-t-0"
                 contentEditable
                 suppressContentEditableWarning
-                onInput={(e) => setArticleContent(e.currentTarget.innerHTML)}
+                onInput={(e) => {
+                  const content = e.currentTarget.innerHTML;
+                  setArticleContent(content);
+                  updateWordCount(content);
+                }}
                 onBlur={(e) => setArticleContent(e.currentTarget.innerHTML)}
                 style={{
                   lineHeight: '1.6',
                   fontSize: '16px',
-                  fontFamily: 'system-ui, -apple-system, sans-serif'
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
+                  outline: 'none'
                 }}
               >
                 {articleContent ? (
