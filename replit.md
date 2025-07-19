@@ -105,7 +105,7 @@ The application uses four main tables:
 
 ### Recent Changes
 
-- **January 16, 2025**: Implemented adaptive bubble sizing system
+- **January 16, 2025**: Implemented adaptive bubble sizing system with align functionality
   - All bubbles now display within visible space without scrolling
   - Smart sizing: uses normal size when space allows, shrinks to compact when needed
   - Compact mode shows only keywords, full content on hover with z-index overlay
@@ -114,6 +114,8 @@ The application uses four main tables:
   - Layout flows in columns: fill top to bottom, then move to next column
   - Bubbles with same keywords grouped together first, then conversation sequence
   - Applied to both "Create Bubbles" and "Recreate Bubbles" functionality
+  - Replaced floating "+" button with Grid align button for organizing manually moved bubbles
+  - Align function reorganizes all bubbles into optimal grid layout with proper sizing
 
 - **January 16, 2025**: Moved category selection dropdown to keyword area
   - Category selection dropdown now positioned next to keyword input for better workflow

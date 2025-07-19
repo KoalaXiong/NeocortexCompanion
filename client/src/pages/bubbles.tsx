@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useLocation, useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Save, FileText, FileDown, Plus, Link as LinkIcon, Palette, RefreshCw } from "lucide-react";
+import { ArrowLeft, Save, FileText, FileDown, Plus, Link as LinkIcon, Palette, RefreshCw, Grid3X3 } from "lucide-react";
 import BubbleCard from "@/components/bubble-card";
 import { apiRequest } from "@/lib/queryClient";
 import type { BubbleWithMessage, InsertBubble } from "@shared/schema";
@@ -42,15 +42,17 @@ export default function Bubbles() {
 
   // Update bubble position/properties
   const updateBubbleMutation = useMutation({
-    mutationFn: async ({ bubbleId, x, y, color, category, title }: { bubbleId: number; x: number; y: number; color?: string; category?: string; title?: string }) => {
+    mutationFn: async ({ bubbleId, x, y, color, category, title, width, height }: { bubbleId: number; x: number; y: number; color?: string; category?: string; title?: string; width?: number; height?: number }) => {
       const updates: any = { x, y };
       if (color !== undefined) updates.color = color;
       if (category !== undefined) updates.category = category;
       if (title !== undefined) updates.title = title;
+      if (width !== undefined) updates.width = width;
+      if (height !== undefined) updates.height = height;
       const response = await apiRequest("PATCH", `/api/bubbles/${bubbleId}`, updates);
       return response.json();
     },
-    onMutate: async ({ bubbleId, x, y, color, category, title }) => {
+    onMutate: async ({ bubbleId, x, y, color, category, title, width, height }) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ["/api/conversations", id, "bubbles"] });
       
@@ -62,7 +64,16 @@ export default function Bubbles() {
         if (!old) return old;
         return old.map(bubble => 
           bubble.id === bubbleId 
-            ? { ...bubble, x, y, ...(color !== undefined && { color }), ...(category !== undefined && { category }), ...(title !== undefined && { title }) }
+            ? { 
+                ...bubble, 
+                x, 
+                y, 
+                ...(color !== undefined && { color }), 
+                ...(category !== undefined && { category }), 
+                ...(title !== undefined && { title }),
+                ...(width !== undefined && { width }),
+                ...(height !== undefined && { height })
+              }
             : bubble
         );
       });
@@ -363,6 +374,72 @@ export default function Bubbles() {
     }
   };
 
+  const handleAlignBubbles = () => {
+    if (bubbles.length === 0) {
+      alert("No bubbles to align. Create bubbles first!");
+      return;
+    }
+
+    const gapX = 20;
+    const gapY = 20;
+    const startX = 20;
+    const startY = 20;
+
+    // Calculate optimal size for current bubble count
+    const { width: bubbleWidth, height: bubbleHeight } = calculateOptimalBubbleSize(bubbles.length);
+
+    // Group bubbles by keyword, then by conversation order
+    const groupedBubbles = bubbles.reduce((groups: { [key: string]: typeof bubbles }, bubble) => {
+      const keyword = bubble.title || "_no_keyword";
+      if (!groups[keyword]) groups[keyword] = [];
+      groups[keyword].push(bubble);
+      return groups;
+    }, {});
+
+    // Sort groups: keyword groups first, then no-keyword group
+    const sortedGroups = Object.entries(groupedBubbles).sort(([keyA], [keyB]) => {
+      if (keyA === "_no_keyword") return 1;
+      if (keyB === "_no_keyword") return -1;
+      return keyA.localeCompare(keyB);
+    });
+
+    // Calculate max rows that fit in visible space
+    const availableHeight = window.innerHeight - 220;
+    const maxRows = Math.floor(availableHeight / (bubbleHeight + gapY));
+    
+    let currentColumn = 0;
+    let currentRow = 0;
+    let bubbleIndex = 0;
+
+    // Align all bubbles to grid positions
+    sortedGroups.forEach(([keyword, groupBubbles]) => {
+      groupBubbles.forEach((bubble) => {
+        const x = startX + currentColumn * (bubbleWidth + gapX);
+        const y = startY + currentRow * (bubbleHeight + gapY);
+
+        // Update bubble position and size
+        updateBubbleMutation.mutate({
+          bubbleId: bubble.id,
+          x: x,
+          y: y,
+          width: bubbleWidth,
+          height: bubbleHeight,
+        });
+
+        // Move to next position - fill column first (top to bottom)
+        currentRow++;
+        if (currentRow >= maxRows) {
+          currentRow = 0;
+          currentColumn++;
+        }
+        
+        bubbleIndex++;
+      });
+    });
+
+    alert("Bubbles aligned to grid layout!");
+  };
+
   if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50">
@@ -481,12 +558,13 @@ export default function Bubbles() {
         {/* Floating Tools */}
         <div className="absolute bottom-6 right-6 space-y-3">
           <Button
-            onClick={handleCreateBubbles}
+            onClick={handleAlignBubbles}
             size="sm"
             className="bg-white bubble-shadow rounded-2xl p-3 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
             variant="ghost"
+            title="Align bubbles in grid layout"
           >
-            <Plus className="h-5 w-5" />
+            <Grid3X3 className="h-5 w-5" />
           </Button>
           <Button
             size="sm"
