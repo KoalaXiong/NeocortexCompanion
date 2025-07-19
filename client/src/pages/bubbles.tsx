@@ -96,12 +96,12 @@ export default function Bubbles() {
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     
-    // Account for header (approximately 140px) and padding, plus floating buttons space
-    const availableWidth = viewportWidth - 120; // Extra space for floating buttons on right
-    const availableHeight = viewportHeight - 200; // Header + padding + floating buttons space
+    // Be very conservative with space calculations to ensure no scrolling
+    const availableWidth = viewportWidth - 150; // Conservative - account for sidebar + floating buttons
+    const availableHeight = viewportHeight - 250; // Conservative - account for header + footer space
     
-    const gapX = 15;
-    const gapY = 15;
+    const gapX = 10; // Smaller gaps to fit more
+    const gapY = 10;
     
     // Normal size
     const normalWidth = 280;
@@ -130,9 +130,9 @@ export default function Bubbles() {
     const compactWidth = Math.floor((availableWidth - (actualCols - 1) * gapX) / actualCols);
     const compactHeight = Math.floor((availableHeight - (actualRows - 1) * gapY) / actualRows);
     
-    // Ensure reasonable minimum dimensions
-    const finalWidth = Math.max(80, Math.min(compactWidth, 250));
-    const finalHeight = Math.max(50, Math.min(compactHeight, 150));
+    // Ensure reasonable minimum dimensions - be more conservative
+    const finalWidth = Math.max(60, Math.min(compactWidth, 200));
+    const finalHeight = Math.max(40, Math.min(compactHeight, 100));
     
     return {
       width: finalWidth,
@@ -144,10 +144,10 @@ export default function Bubbles() {
   // Create bubbles for messages that don't have them with adaptive layout
   const handleCreateBubbles = () => {
     const colors = ["blue", "green", "purple", "orange", "red"];
-    const gapX = 20;
-    const gapY = 20;
-    const startX = 20;
-    const startY = 20;
+    const gapX = 10;
+    const gapY = 10;
+    const startX = 10;
+    const startY = 10;
 
     // Get messages that don't have bubbles and organize them
     const messagesToCreate = messages.filter(message => 
@@ -173,12 +173,12 @@ export default function Bubbles() {
       return keyA.localeCompare(keyB);
     });
 
-    // Calculate positions for all bubbles - fill columns top to bottom
+    // Calculate positions for all bubbles - fill columns top to bottom  
     const viewportHeight = window.innerHeight;
-    const availableHeight = viewportHeight - 200;
-    const maxRows = Math.floor((availableHeight + gapY) / (bubbleHeight + gapY));
+    const availableHeight = viewportHeight - 250; // Very conservative
+    const maxRows = Math.max(1, Math.floor((availableHeight + gapY) / (bubbleHeight + gapY)));
     
-    if (maxRows <= 0) return; // Safety check
+    if (maxRows <= 0 || availableHeight <= 0) return; // Safety check
     
     let currentColumn = 0;
     let currentRow = 0;
@@ -189,11 +189,11 @@ export default function Bubbles() {
         const x = startX + currentColumn * (bubbleWidth + gapX);
         const y = startY + currentRow * (bubbleHeight + gapY);
         
-        // Ensure bubble stays within viewport bounds
-        const maxX = window.innerWidth - bubbleWidth - 100;
-        const maxY = availableHeight - bubbleHeight + startY;
-        const clampedX = Math.min(x, maxX);
-        const clampedY = Math.min(y, maxY);
+        // Ensure bubble stays within viewport bounds with conservative margins
+        const maxX = Math.max(0, window.innerWidth - bubbleWidth - 150);
+        const maxY = Math.max(0, availableHeight - bubbleHeight);
+        const clampedX = Math.max(0, Math.min(x, maxX));
+        const clampedY = Math.max(0, Math.min(y, maxY));
 
         createBubbleMutation.mutate({
           messageId: message.id,
@@ -287,11 +287,11 @@ export default function Bubbles() {
 
       // Calculate grid layout to ensure everything fits in viewport
       const viewportHeight = window.innerHeight;
-      const availableHeight = viewportHeight - 200; // Account for header + padding
-      const maxRows = Math.floor((availableHeight + gapY) / (bubbleHeight + gapY));
+      const availableHeight = viewportHeight - 250; // Very conservative space calculation
+      const maxRows = Math.max(1, Math.floor((availableHeight + gapY) / (bubbleHeight + gapY)));
       
       // Ensure we don't exceed available space
-      if (maxRows <= 0) return;
+      if (maxRows <= 0 || availableHeight <= 0) return;
       
       let currentColumn = 0;
       let currentRow = 0;
@@ -304,11 +304,11 @@ export default function Bubbles() {
           const x = startX + currentColumn * (bubbleWidth + gapX);
           const y = startY + currentRow * (bubbleHeight + gapY);
           
-          // Ensure bubble stays within viewport bounds
-          const maxX = window.innerWidth - bubbleWidth - 100; // Leave space for floating buttons
-          const maxY = availableHeight - bubbleHeight + startY;
-          const clampedX = Math.min(x, maxX);
-          const clampedY = Math.min(y, maxY);
+          // Ensure bubble stays within viewport bounds with conservative margins
+          const maxX = Math.max(0, window.innerWidth - bubbleWidth - 150); // Extra conservative space
+          const maxY = Math.max(0, availableHeight - bubbleHeight);
+          const clampedX = Math.max(0, Math.min(x, maxX));
+          const clampedY = Math.max(0, Math.min(y, maxY));
 
           createBubbleMutation.mutate({
             messageId: message.id,
