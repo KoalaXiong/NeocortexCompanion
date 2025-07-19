@@ -520,11 +520,19 @@ export default function Bubbles() {
   };
 
   const renderConnections = () => {
+    console.log('Rendering connections:', connections.length, 'connections');
+    console.log('Available bubbles:', bubbles.map(b => b.id));
+    
     return connections.map(connection => {
       const fromBubble = bubbles.find(b => b.id === connection.from);
       const toBubble = bubbles.find(b => b.id === connection.to);
       
-      if (!fromBubble || !toBubble) return null;
+      console.log('Connection:', connection.id, 'from:', fromBubble?.id, 'to:', toBubble?.id);
+      
+      if (!fromBubble || !toBubble) {
+        console.log('Missing bubble for connection:', connection.id);
+        return null;
+      }
       
       // Calculate center points of bubbles
       const fromX = fromBubble.x + fromBubble.width / 2;
@@ -547,11 +555,15 @@ export default function Bubbles() {
       const arrowHead2X = tipX - arrowLength * Math.cos(angle + arrowAngle);
       const arrowHead2Y = tipY - arrowLength * Math.sin(angle + arrowAngle);
       
+      console.log('Rendering arrow from', fromX, fromY, 'to', toX, toY);
+      
       return (
         <svg
           key={connection.id}
           className="absolute inset-0 pointer-events-none"
           style={{ zIndex: 100 }}
+          width="100%"
+          height="100%"
         >
           {/* Main line */}
           <line
