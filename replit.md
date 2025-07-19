@@ -105,14 +105,15 @@ The application uses four main tables:
 
 ### Recent Changes
 
-- **January 16, 2025**: Implemented smart bubble layout system
-  - Bubbles now placed tightly together with minimal gaps (20px)
+- **January 16, 2025**: Implemented adaptive bubble sizing system
+  - All bubbles now display within visible space without scrolling
+  - Smart sizing: uses normal size when space allows, shrinks to compact when needed
+  - Compact mode shows only keywords, full content on hover with z-index overlay
+  - Hover effects: enlarges to normal size and appears above other bubbles
+  - Dynamic size calculation based on available screen space and bubble count
   - Layout flows in columns: fill top to bottom, then move to next column
-  - Bubbles with same keywords are grouped together first
-  - Then follows conversation sequence for ungrouped bubbles
-  - Dynamic column/row calculation based on window dimensions
+  - Bubbles with same keywords grouped together first, then conversation sequence
   - Applied to both "Create Bubbles" and "Recreate Bubbles" functionality
-  - Fixed overlapping issues by proper column-based positioning
 
 - **January 16, 2025**: Moved category selection dropdown to keyword area
   - Category selection dropdown now positioned next to keyword input for better workflow

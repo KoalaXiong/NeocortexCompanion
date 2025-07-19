@@ -12,14 +12,16 @@ interface BubbleCardProps {
   onColorChange?: (bubbleId: number, color: string) => void;
   onCategoryChange?: (bubbleId: number, category: string) => void;
   onTitleChange?: (bubbleId: number, title: string) => void;
+  isCompact?: boolean; // Whether bubble is in compact mode
 }
 
-export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryChange, onTitleChange }: BubbleCardProps) {
+export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryChange, onTitleChange, isCompact = false }: BubbleCardProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: bubble.x, y: bubble.y });
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [localTitle, setLocalTitle] = useState(bubble.title || "");
+  const [isHovered, setIsHovered] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   
   // Update position only when bubble data changes and we're not dragging
@@ -157,20 +159,29 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
   const color = bubble.color || getCategoryColor(bubble.category) || "blue";
   const colorClasses = getColorClasses(color);
 
+  // Calculate adaptive sizing
+  const normalWidth = 280;
+  const normalHeight = 120;
+  const currentWidth = isCompact && !isHovered ? bubble.width : normalWidth;
+  const currentHeight = isCompact && !isHovered ? bubble.height : normalHeight;
+
   return (
     <Card
       ref={cardRef}
-      className={`absolute cursor-move hover:shadow-xl transition-all duration-200 transform hover:scale-105 border-2 ${colorClasses.border} ${
-        isDragging ? 'scale-105 shadow-2xl z-50' : ''
+      className={`absolute cursor-move transition-all duration-200 border-2 ${colorClasses.border} ${
+        isDragging ? 'scale-105 shadow-2xl' : isHovered ? 'shadow-xl scale-105' : 'hover:shadow-lg'
       }`}
       style={{
         left: position.x,
         top: position.y,
-        width: bubble.width,
-        minHeight: bubble.height,
-        userSelect: 'none'
+        width: currentWidth,
+        height: currentHeight,
+        userSelect: 'none',
+        zIndex: isDragging ? 1000 : isHovered ? 100 : 1,
       }}
       onMouseDown={handleMouseDown}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       <div className="p-4">
         <div className="flex items-start justify-between mb-2">
@@ -310,9 +321,16 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
             <GripVertical className="h-4 w-4 text-gray-400" />
           </div>
         </div>
-        <p className="text-gray-800 font-medium text-sm leading-relaxed mb-3">
-          {bubble.message.text}
-        </p>
+        {/* Content - show full text when hovered or normal size, truncated when compact */}
+        {isCompact && !isHovered ? (
+          <p className="text-gray-600 text-xs leading-tight overflow-hidden">
+            {bubble.message.text.length > 50 ? bubble.message.text.substring(0, 50) + '...' : bubble.message.text}
+          </p>
+        ) : (
+          <p className="text-gray-800 font-medium text-sm leading-relaxed mb-3">
+            {bubble.message.text}
+          </p>
+        )}
         <div className="flex items-center justify-between text-xs text-gray-500">
           <span>{formatTime(bubble.message.createdAt)}</span>
           <span>{wordCount} words</span>

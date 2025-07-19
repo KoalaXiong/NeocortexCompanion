@@ -88,21 +88,76 @@ export default function Bubbles() {
     enabled: !!id,
   });
 
-  // Create bubbles for messages that don't have them with smart layout
+  // Calculate optimal bubble size based on available space and bubble count
+  const calculateOptimalBubbleSize = (totalBubbles: number) => {
+    const availableWidth = window.innerWidth - 40; // Account for margins
+    const availableHeight = window.innerHeight - 200; // Account for header
+    const gapX = 20;
+    const gapY = 20;
+    
+    // Normal size
+    const normalWidth = 280;
+    const normalHeight = 120;
+    
+    // Minimum size (compact mode)
+    const minWidth = 140;
+    const minHeight = 60;
+    
+    // Calculate how many bubbles can fit at normal size
+    const maxColsNormal = Math.floor(availableWidth / (normalWidth + gapX));
+    const maxRowsNormal = Math.floor(availableHeight / (normalHeight + gapY));
+    const maxBubblesNormal = maxColsNormal * maxRowsNormal;
+    
+    if (totalBubbles <= maxBubblesNormal) {
+      // Use normal size if they all fit
+      return {
+        width: normalWidth,
+        height: normalHeight,
+        isCompact: false
+      };
+    }
+    
+    // Calculate if they fit at minimum size
+    const maxColsMin = Math.floor(availableWidth / (minWidth + gapX));
+    const maxRowsMin = Math.floor(availableHeight / (minHeight + gapY));
+    const maxBubblesMin = maxColsMin * maxRowsMin;
+    
+    if (totalBubbles <= maxBubblesMin) {
+      // Use minimum size if they fit
+      return {
+        width: minWidth,
+        height: minHeight,
+        isCompact: true
+      };
+    }
+    
+    // If even minimum size doesn't fit all, use adaptive sizing
+    const adaptiveWidth = Math.max(minWidth, Math.floor(availableWidth / maxColsMin) - gapX);
+    const adaptiveHeight = Math.max(minHeight, Math.floor(availableHeight / maxRowsMin) - gapY);
+    
+    return {
+      width: adaptiveWidth,
+      height: adaptiveHeight,
+      isCompact: true
+    };
+  };
+
+  // Create bubbles for messages that don't have them with adaptive layout
   const handleCreateBubbles = () => {
     const colors = ["blue", "green", "purple", "orange", "red"];
-    const bubbleWidth = 280;
-    const bubbleHeight = 120;
-    const gapX = 20; // Minimal horizontal gap
-    const gapY = 20; // Minimal vertical gap
-    const startX = 20; // Start from edge of visible area
-    const startY = 20; // Start from top edge
-    const columnsPerRow = Math.floor((window.innerWidth - 40) / (bubbleWidth + gapX)); // Calculate how many fit per row
+    const gapX = 20;
+    const gapY = 20;
+    const startX = 20;
+    const startY = 20;
 
     // Get messages that don't have bubbles and organize them
     const messagesToCreate = messages.filter(message => 
       !bubbles.find(b => b.messageId === message.id)
     );
+
+    // Calculate optimal size based on total number of bubbles (including existing ones)
+    const totalBubbles = bubbles.length + messagesToCreate.length;
+    const { width: bubbleWidth, height: bubbleHeight, isCompact } = calculateOptimalBubbleSize(totalBubbles);
 
     // Group messages by keyword, then by conversation order
     const groupedMessages = messagesToCreate.reduce((groups: { [key: string]: typeof messagesToCreate }, message) => {
@@ -120,7 +175,7 @@ export default function Bubbles() {
     });
 
     // Calculate positions for all bubbles - fill columns top to bottom
-    const maxRows = Math.floor((window.innerHeight - 200) / (bubbleHeight + gapY)); // Account for header space
+    const maxRows = Math.floor((window.innerHeight - 200) / (bubbleHeight + gapY));
     let currentColumn = 0;
     let currentRow = 0;
     let bubbleIndex = 0;
@@ -197,13 +252,13 @@ export default function Bubbles() {
 
     const createNewBubbles = () => {
       const colors = ["blue", "green", "purple", "orange", "red"];
-      const bubbleWidth = 280;
-      const bubbleHeight = 120;
-      const gapX = 20; // Minimal horizontal gap
-      const gapY = 20; // Minimal vertical gap
-      const startX = 20; // Start from edge of visible area
-      const startY = 20; // Start from top edge
-      const columnsPerRow = Math.floor((window.innerWidth - 40) / (bubbleWidth + gapX)); // Calculate how many fit per row
+      const gapX = 20;
+      const gapY = 20;
+      const startX = 20;
+      const startY = 20;
+
+      // Calculate optimal size based on total number of messages
+      const { width: bubbleWidth, height: bubbleHeight, isCompact } = calculateOptimalBubbleSize(messages.length);
 
       // Group messages by keyword, then by conversation order
       const groupedMessages = messages.reduce((groups: { [key: string]: typeof messages }, message) => {
@@ -221,7 +276,7 @@ export default function Bubbles() {
       });
 
       // Calculate positions for all bubbles - fill columns top to bottom
-      const maxRows = Math.floor((window.innerHeight - 200) / (bubbleHeight + gapY)); // Account for header space
+      const maxRows = Math.floor((window.innerHeight - 200) / (bubbleHeight + gapY));
       let currentColumn = 0;
       let currentRow = 0;
       let bubbleIndex = 0;
@@ -407,16 +462,23 @@ export default function Bubbles() {
               </div>
             </div>
           ) : (
-            bubbles.map((bubble) => (
-              <BubbleCard
-                key={bubble.id}
-                bubble={bubble}
-                onMove={handleBubbleMove}
-                onColorChange={handleBubbleColorChange}
-                onCategoryChange={handleBubbleCategoryChange}
-                onTitleChange={handleBubbleTitleChange}
-              />
-            ))
+            bubbles.map((bubble) => {
+              // Check if this bubble is in compact mode based on its size
+              const normalWidth = 280;
+              const isCompactMode = bubble.width < normalWidth;
+              
+              return (
+                <BubbleCard
+                  key={bubble.id}
+                  bubble={bubble}
+                  onMove={handleBubbleMove}
+                  onColorChange={handleBubbleColorChange}
+                  onCategoryChange={handleBubbleCategoryChange}
+                  onTitleChange={handleBubbleTitleChange}
+                  isCompact={isCompactMode}
+                />
+              );
+            })
           )}
         </div>
 
