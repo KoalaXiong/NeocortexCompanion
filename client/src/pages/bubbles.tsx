@@ -96,12 +96,12 @@ export default function Bubbles() {
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     
-    // Extremely conservative with space calculations to ensure no scrolling
-    const availableWidth = viewportWidth - 300; // Very conservative - account for sidebar + all margins
-    const availableHeight = viewportHeight - 300; // Very conservative - account for header + all margins
+    // Account for header (approximately 140px) and padding
+    const availableWidth = viewportWidth - 40; // 20px padding each side
+    const availableHeight = viewportHeight - 180; // 140px header + 40px padding
     
-    const gapX = 10; // Smaller gaps to fit more
-    const gapY = 10;
+    const gapX = 15;
+    const gapY = 15;
     
     // Normal size
     const normalWidth = 280;
@@ -130,9 +130,9 @@ export default function Bubbles() {
     const compactWidth = Math.floor((availableWidth - (actualCols - 1) * gapX) / actualCols);
     const compactHeight = Math.floor((availableHeight - (actualRows - 1) * gapY) / actualRows);
     
-    // Ensure reasonable minimum dimensions - be more conservative
-    const finalWidth = Math.max(60, Math.min(compactWidth, 200));
-    const finalHeight = Math.max(40, Math.min(compactHeight, 100));
+    // Ensure reasonable minimum dimensions
+    const finalWidth = Math.max(80, Math.min(compactWidth, 250));
+    const finalHeight = Math.max(50, Math.min(compactHeight, 150));
     
     return {
       width: finalWidth,
@@ -144,10 +144,10 @@ export default function Bubbles() {
   // Create bubbles for messages that don't have them with adaptive layout
   const handleCreateBubbles = () => {
     const colors = ["blue", "green", "purple", "orange", "red"];
-    const gapX = 10;
-    const gapY = 10;
-    const startX = 10;
-    const startY = 10;
+    const gapX = 20;
+    const gapY = 20;
+    const startX = 20;
+    const startY = 20;
 
     // Get messages that don't have bubbles and organize them
     const messagesToCreate = messages.filter(message => 
@@ -173,13 +173,8 @@ export default function Bubbles() {
       return keyA.localeCompare(keyB);
     });
 
-    // Calculate positions for all bubbles - fill columns top to bottom  
-    const viewportHeight = window.innerHeight;
-    const availableHeight = viewportHeight - 250; // Very conservative
-    const maxRows = Math.max(1, Math.floor((availableHeight + gapY) / (bubbleHeight + gapY)));
-    
-    if (maxRows <= 0 || availableHeight <= 0) return; // Safety check
-    
+    // Calculate positions for all bubbles - fill columns top to bottom
+    const maxRows = Math.floor((window.innerHeight - 200) / (bubbleHeight + gapY));
     let currentColumn = 0;
     let currentRow = 0;
     let bubbleIndex = 0;
@@ -188,17 +183,11 @@ export default function Bubbles() {
       groupMessages.forEach((message) => {
         const x = startX + currentColumn * (bubbleWidth + gapX);
         const y = startY + currentRow * (bubbleHeight + gapY);
-        
-        // Ensure bubble stays within viewport bounds with very conservative margins
-        const maxX = Math.max(0, window.innerWidth - bubbleWidth - 200);
-        const maxY = Math.max(0, availableHeight - bubbleHeight - 50);
-        const clampedX = Math.max(startX, Math.min(x, maxX));
-        const clampedY = Math.max(startY, Math.min(y, maxY));
 
         createBubbleMutation.mutate({
           messageId: message.id,
-          x: clampedX,
-          y: clampedY,
+          x: x,
+          y: y,
           width: bubbleWidth,
           height: bubbleHeight,
           category: "", // No default category - let user add manually
@@ -287,11 +276,8 @@ export default function Bubbles() {
 
       // Calculate grid layout to ensure everything fits in viewport
       const viewportHeight = window.innerHeight;
-      const availableHeight = viewportHeight - 250; // Very conservative space calculation
-      const maxRows = Math.max(1, Math.floor((availableHeight + gapY) / (bubbleHeight + gapY)));
-      
-      // Ensure we don't exceed available space
-      if (maxRows <= 0 || availableHeight <= 0) return;
+      const availableHeight = viewportHeight - 180; // Account for header
+      const maxRows = Math.floor((availableHeight + gapY) / (bubbleHeight + gapY));
       
       let currentColumn = 0;
       let currentRow = 0;
@@ -303,17 +289,11 @@ export default function Bubbles() {
           
           const x = startX + currentColumn * (bubbleWidth + gapX);
           const y = startY + currentRow * (bubbleHeight + gapY);
-          
-          // Ensure bubble stays within viewport bounds with very conservative margins
-          const maxX = Math.max(0, window.innerWidth - bubbleWidth - 200); // Very conservative space
-          const maxY = Math.max(0, availableHeight - bubbleHeight - 50);
-          const clampedX = Math.max(startX, Math.min(x, maxX));
-          const clampedY = Math.max(startY, Math.min(y, maxY));
 
           createBubbleMutation.mutate({
             messageId: message.id,
-            x: clampedX,
-            y: clampedY,
+            x: x,
+            y: y,
             width: bubbleWidth,
             height: bubbleHeight,
             category: "", // No default category - let user add manually
@@ -405,76 +385,76 @@ export default function Bubbles() {
   }
 
   return (
-    <div className="h-screen flex flex-col gradient-purple-blue bubbles-page" style={{ overflow: 'hidden', width: '100vw', height: '100vh' }}>
+    <div className="h-screen flex flex-col gradient-purple-blue" style={{ overflow: 'hidden', width: '100vw', height: '100vh' }}>
       {/* Bubbles Header */}
       <div className="gradient-primary-to-secondary text-white px-4 py-4 shadow-sm">
-        <div className="flex items-center justify-between max-w-full mx-auto px-2">
-          <div className="flex items-center space-x-2">
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
+          <div className="flex items-center space-x-4">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setLocation(`/chat/${id}`)}
               className="hover:bg-white/20 text-white"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h2 className="text-lg font-bold">Bubble Organization</h2>
-              <p className="text-xs text-purple-200">Organize your thoughts spatially</p>
+              <h2 className="text-xl font-bold">Bubble Organization</h2>
+              <p className="text-sm text-purple-200">Organize your thoughts spatially</p>
             </div>
           </div>
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-3">
             <Button
               onClick={handleRecreateBubbles}
               variant="ghost"
               size="sm"
-              className="bg-white/20 hover:bg-white/30 text-white text-xs px-2"
+              className="bg-white/20 hover:bg-white/30 text-white"
               disabled={messages.length === 0}
             >
-              <RefreshCw className="mr-1 h-3 w-3" />
-              Recreate
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Recreate Bubbles
             </Button>
             <Button
               onClick={handleSaveLayout}
               variant="ghost"
               size="sm"
-              className="bg-white/20 hover:bg-white/30 text-white text-xs px-2"
+              className="bg-white/20 hover:bg-white/30 text-white"
             >
-              <Save className="mr-1 h-3 w-3" />
-              Save
+              <Save className="mr-2 h-4 w-4" />
+              Save Layout
             </Button>
             <Button
               onClick={() => setLocation(`/article/${id}`)}
               size="sm"
-              className="bg-white text-primary hover:bg-gray-100 text-xs px-2"
+              className="bg-white text-primary hover:bg-gray-100"
             >
-              <FileText className="mr-1 h-3 w-3" />
-              Article
+              <FileText className="mr-2 h-4 w-4" />
+              Create Article
             </Button>
             <Button
               onClick={() => window.open(`/api/export-pdf/${id}`, '_blank')}
               size="sm"
-              className="bg-yellow-400 text-yellow-900 hover:bg-yellow-300 text-xs px-2"
+              className="bg-yellow-400 text-yellow-900 hover:bg-yellow-300"
             >
-              <FileDown className="mr-1 h-3 w-3" />
-              PDF
+              <FileDown className="mr-2 h-4 w-4" />
+              Export PDF
             </Button>
           </div>
         </div>
       </div>
 
       {/* Canvas Area */}
-      <div className="flex-1 relative" style={{ overflow: 'hidden', height: 'calc(100vh - 100px)' }}>
+      <div className="flex-1 relative" style={{ overflow: 'hidden' }}>
         <div 
           ref={canvasRef}
-          className="absolute inset-0 bubble-canvas"
+          className="absolute inset-0"
           style={{
             backgroundImage: "radial-gradient(circle, rgba(139, 92, 246, 0.2) 1px, transparent 1px)",
             backgroundSize: "20px 20px",
             overflow: 'hidden',
             width: '100%',
             height: '100%',
-            padding: '5px',
+            padding: '10px',
             boxSizing: 'border-box'
           }}
         >
@@ -509,29 +489,29 @@ export default function Bubbles() {
           )}
         </div>
 
-        {/* Floating Tools - positioned within safe area */}
-        <div className="absolute bottom-2 right-2 flex space-x-1 z-50">
+        {/* Floating Tools */}
+        <div className="absolute bottom-6 right-6 space-y-3">
           <Button
             onClick={handleCreateBubbles}
             size="sm"
-            className="bg-white bubble-shadow rounded-lg p-1 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
+            className="bg-white bubble-shadow rounded-2xl p-3 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
             variant="ghost"
           >
-            <Plus className="h-3 w-3" />
+            <Plus className="h-5 w-5" />
           </Button>
           <Button
             size="sm"
-            className="bg-white bubble-shadow rounded-lg p-1 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
+            className="bg-white bubble-shadow rounded-2xl p-3 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
             variant="ghost"
           >
-            <LinkIcon className="h-3 w-3" />
+            <LinkIcon className="h-5 w-5" />
           </Button>
           <Button
             size="sm"
-            className="bg-white bubble-shadow rounded-lg p-1 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
+            className="bg-white bubble-shadow rounded-2xl p-3 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
             variant="ghost"
           >
-            <Palette className="h-3 w-3" />
+            <Palette className="h-5 w-5" />
           </Button>
         </div>
       </div>

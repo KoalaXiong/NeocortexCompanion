@@ -2,23 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Prevent scrollbars only on the bubbles page */
-.bubbles-page {
+/* Prevent scrollbars throughout the application */
+html, body {
+  overflow: hidden !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#root {
   overflow: hidden !important;
   width: 100vw !important;
   height: 100vh !important;
 }
 
-.bubbles-page .bubble-canvas {
+/* Prevent any scrolling on bubble containers */
+.bubble-container, .bubble-canvas {
   overflow: hidden !important;
 }
 
-/* Hide scrollbars only on bubbles page */
-.bubbles-page ::-webkit-scrollbar {
+/* Hide scrollbars globally if they still appear */
+::-webkit-scrollbar {
   display: none !important;
 }
 
-.bubbles-page * {
+* {
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
 }
