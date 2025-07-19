@@ -133,6 +133,8 @@ The application uses four main tables:
   - Clear separation between connection creation (double-click) and disconnection (single click)
   - Fixed connection persistence by storing connections in localStorage instead of component state
   - Connections now survive component re-renders and page reloads
+  - Multiple connections allowed between same bubbles using unique timestamps
+  - Fixed double-click event handling to prevent accidental disconnections
 
 - **January 16, 2025**: Moved category selection dropdown to keyword area
   - Category selection dropdown now positioned next to keyword input for better workflow

@@ -498,20 +498,13 @@ export default function Bubbles() {
       const fromBubble = selectedBubbles[0];
       const toBubble = bubbleId;
       
-      // Check if this exact connection already exists
-      const connectionExists = connections.some(
-        conn => (conn.from === fromBubble && conn.to === toBubble) || 
-                (conn.from === toBubble && conn.to === fromBubble)
-      );
-      
-      if (!connectionExists) {
-        const newConnection = {
-          id: `${fromBubble}-${toBubble}`,
-          from: fromBubble,
-          to: toBubble
-        };
-        addConnection(newConnection);
-      }
+      // Always allow new connections (multiple connections between same bubbles allowed)
+      const newConnection = {
+        id: `${fromBubble}-${toBubble}-${Date.now()}`, // Add timestamp to make each connection unique
+        from: fromBubble,
+        to: toBubble
+      };
+      addConnection(newConnection);
       
       setSelectedBubbles([]);
     } else {
@@ -523,13 +516,19 @@ export default function Bubbles() {
   const handleBubbleClick = (bubbleId: number) => {
     if (!isConnectMode) return;
     
-    // Single click only disconnects existing connections
-    const existingConnection = connections.find(
+    // Single click disconnects the most recent connection for this bubble
+    const existingConnections = connections.filter(
       conn => conn.from === bubbleId || conn.to === bubbleId
     );
     
-    if (existingConnection) {
-      removeConnection(existingConnection.id);
+    if (existingConnections.length > 0) {
+      // Remove the most recently created connection (highest timestamp in ID)
+      const mostRecentConnection = existingConnections.reduce((latest, current) => {
+        const latestTime = parseInt(latest.id.split('-').pop() || '0');
+        const currentTime = parseInt(current.id.split('-').pop() || '0');
+        return currentTime > latestTime ? current : latest;
+      });
+      removeConnection(mostRecentConnection.id);
     }
   };
 

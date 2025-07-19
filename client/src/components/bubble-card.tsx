@@ -138,7 +138,7 @@ export default function BubbleCard({
       e.preventDefault();
       e.stopPropagation();
       
-      // Clear the pending single-click handler
+      // Clear the pending single-click handler to prevent disconnection
       if (clickTimeoutRef.current) {
         clearTimeout(clickTimeoutRef.current);
         clickTimeoutRef.current = null;
