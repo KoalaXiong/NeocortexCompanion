@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useLocation, useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -14,10 +14,11 @@ export default function Bubbles() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   
-  // Connection state
+  // Connection state - using useRef to persist across re-renders
   const [isConnectMode, setIsConnectMode] = useState(false);
   const [selectedBubbles, setSelectedBubbles] = useState<number[]>([]);
-  const [connections, setConnections] = useState<Array<{id: string; from: number; to: number}>>([]);
+  const connectionsRef = useRef<Array<{id: string; from: number; to: number}>>([]);
+  const [, setConnectionsRender] = useState(0); // Force re-render when connections change
 
   const { data: bubbles = [], isLoading } = useQuery<BubbleWithMessage[]>({
     queryKey: ["/api/conversations", id, "bubbles"],
@@ -450,34 +451,37 @@ export default function Bubbles() {
     }
   };
 
+  // Helper functions for connection management
+  const addConnection = useCallback((connection: {id: string; from: number; to: number}) => {
+    connectionsRef.current = [...connectionsRef.current, connection];
+    setConnectionsRender(prev => prev + 1);
+  }, []);
+
+  const removeConnection = useCallback((connectionId: string) => {
+    connectionsRef.current = connectionsRef.current.filter(conn => conn.id !== connectionId);
+    setConnectionsRender(prev => prev + 1);
+  }, []);
+
   const handleBubbleDoubleClick = (bubbleId: number) => {
     if (!isConnectMode) return;
-    
-    console.log('Double-click bubble:', bubbleId);
-    console.log('Current connections before action:', connections);
-    console.log('Selected bubbles before action:', selectedBubbles);
     
     // Always allow selection/deselection with double-click, regardless of existing connections
     if (selectedBubbles.includes(bubbleId)) {
       // Deselect if already selected
-      console.log('Deselecting bubble:', bubbleId);
       setSelectedBubbles(prev => prev.filter(id => id !== bubbleId));
       return;
     }
     
     if (selectedBubbles.length === 0) {
       // Select first bubble (preserve existing connections)
-      console.log('Selecting first bubble:', bubbleId);
       setSelectedBubbles([bubbleId]);
     } else if (selectedBubbles.length === 1) {
       // Select second bubble and create connection
       const fromBubble = selectedBubbles[0];
       const toBubble = bubbleId;
       
-      console.log('Attempting to create connection from', fromBubble, 'to', toBubble);
-      
       // Check if this exact connection already exists
-      const connectionExists = connections.some(
+      const connectionExists = connectionsRef.current.some(
         conn => (conn.from === fromBubble && conn.to === toBubble) || 
                 (conn.from === toBubble && conn.to === fromBubble)
       );
@@ -488,21 +492,12 @@ export default function Bubbles() {
           from: fromBubble,
           to: toBubble
         };
-        console.log('Adding new connection:', newConnection);
-        // Add new connection without affecting existing ones
-        setConnections(prev => {
-          const updated = [...prev, newConnection];
-          console.log('Updated connections:', updated);
-          return updated;
-        });
-      } else {
-        console.log('Connection already exists, not creating duplicate');
+        addConnection(newConnection);
       }
       
       setSelectedBubbles([]);
     } else {
       // Reset selection if more than 2 somehow
-      console.log('Resetting selection to single bubble:', bubbleId);
       setSelectedBubbles([bubbleId]);
     }
   };
@@ -511,17 +506,17 @@ export default function Bubbles() {
     if (!isConnectMode) return;
     
     // Single click only disconnects existing connections
-    const existingConnection = connections.find(
+    const existingConnection = connectionsRef.current.find(
       conn => conn.from === bubbleId || conn.to === bubbleId
     );
     
     if (existingConnection) {
-      setConnections(prev => prev.filter(conn => conn.id !== existingConnection.id));
+      removeConnection(existingConnection.id);
     }
   };
 
   const renderConnections = () => {
-    return connections.map(connection => {
+    return connectionsRef.current.map(connection => {
       const fromBubble = bubbles.find(b => b.id === connection.from);
       const toBubble = bubbles.find(b => b.id === connection.to);
       
