@@ -388,19 +388,19 @@ export default function Bubbles() {
     // Calculate optimal size for current bubble count
     const { width: bubbleWidth, height: bubbleHeight } = calculateOptimalBubbleSize(bubbles.length);
 
-    // Group bubbles by keyword, then by conversation order
-    const groupedBubbles = bubbles.reduce((groups: { [key: string]: typeof bubbles }, bubble) => {
-      const keyword = bubble.title || "_no_keyword";
-      if (!groups[keyword]) groups[keyword] = [];
-      groups[keyword].push(bubble);
-      return groups;
-    }, {});
-
-    // Sort groups: keyword groups first, then no-keyword group
-    const sortedGroups = Object.entries(groupedBubbles).sort(([keyA], [keyB]) => {
-      if (keyA === "_no_keyword") return 1;
-      if (keyB === "_no_keyword") return -1;
-      return keyA.localeCompare(keyB);
+    // Sort bubbles by their current spatial position to preserve user arrangement
+    // Sort by column first (x position), then by row (y position)
+    const spatialSortedBubbles = [...bubbles].sort((a, b) => {
+      // Group into columns based on x position (with some tolerance for alignment)
+      const columnA = Math.round(a.x / 300); // Approximate column based on x position
+      const columnB = Math.round(b.x / 300);
+      
+      if (columnA !== columnB) {
+        return columnA - columnB; // Sort by column first
+      }
+      
+      // Within same column, sort by y position (top to bottom)
+      return a.y - b.y;
     });
 
     // Calculate max rows that fit in visible space
@@ -409,35 +409,30 @@ export default function Bubbles() {
     
     let currentColumn = 0;
     let currentRow = 0;
-    let bubbleIndex = 0;
 
-    // Align all bubbles to grid positions
-    sortedGroups.forEach(([keyword, groupBubbles]) => {
-      groupBubbles.forEach((bubble) => {
-        const x = startX + currentColumn * (bubbleWidth + gapX);
-        const y = startY + currentRow * (bubbleHeight + gapY);
+    // Align all bubbles to grid positions maintaining spatial sequence
+    spatialSortedBubbles.forEach((bubble) => {
+      const x = startX + currentColumn * (bubbleWidth + gapX);
+      const y = startY + currentRow * (bubbleHeight + gapY);
 
-        // Update bubble position and size
-        updateBubbleMutation.mutate({
-          bubbleId: bubble.id,
-          x: x,
-          y: y,
-          width: bubbleWidth,
-          height: bubbleHeight,
-        });
-
-        // Move to next position - fill column first (top to bottom)
-        currentRow++;
-        if (currentRow >= maxRows) {
-          currentRow = 0;
-          currentColumn++;
-        }
-        
-        bubbleIndex++;
+      // Update bubble position and size
+      updateBubbleMutation.mutate({
+        bubbleId: bubble.id,
+        x: x,
+        y: y,
+        width: bubbleWidth,
+        height: bubbleHeight,
       });
+
+      // Move to next position - fill column first (top to bottom)
+      currentRow++;
+      if (currentRow >= maxRows) {
+        currentRow = 0;
+        currentColumn++;
+      }
     });
 
-    alert("Bubbles aligned to grid layout!");
+    alert("Bubbles aligned to grid layout preserving your arrangement!");
   };
 
   if (isLoading) {

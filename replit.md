@@ -115,7 +115,8 @@ The application uses four main tables:
   - Bubbles with same keywords grouped together first, then conversation sequence
   - Applied to both "Create Bubbles" and "Recreate Bubbles" functionality
   - Replaced floating "+" button with Grid align button for organizing manually moved bubbles
-  - Align function reorganizes all bubbles into optimal grid layout with proper sizing
+  - Align function preserves current spatial arrangement sequence instead of reverting to keyword grouping
+  - Spatial sorting maintains user's manual layout decisions while applying clean grid positioning
 
 - **January 16, 2025**: Moved category selection dropdown to keyword area
   - Category selection dropdown now positioned next to keyword input for better workflow
