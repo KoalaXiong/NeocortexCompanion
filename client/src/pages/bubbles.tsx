@@ -453,25 +453,20 @@ export default function Bubbles() {
   const handleBubbleDoubleClick = (bubbleId: number) => {
     if (!isConnectMode) return;
     
-    console.log('Double click bubble:', bubbleId, 'Selected bubbles:', selectedBubbles.length);
-    
+    // Always allow selection/deselection with double-click, regardless of existing connections
     if (selectedBubbles.includes(bubbleId)) {
       // Deselect if already selected
-      console.log('Deselecting bubble:', bubbleId);
       setSelectedBubbles(prev => prev.filter(id => id !== bubbleId));
       return;
     }
     
     if (selectedBubbles.length === 0) {
       // Select first bubble
-      console.log('Selecting first bubble:', bubbleId);
       setSelectedBubbles([bubbleId]);
     } else if (selectedBubbles.length === 1) {
       // Select second bubble and create connection
       const fromBubble = selectedBubbles[0];
       const toBubble = bubbleId;
-      
-      console.log('Creating connection from', fromBubble, 'to', toBubble);
       
       // Check if connection already exists
       const connectionExists = connections.some(
@@ -485,22 +480,12 @@ export default function Bubbles() {
           from: fromBubble,
           to: toBubble
         };
-        console.log('Adding new connection:', newConnection);
-        setConnections(prev => {
-          const updated = [...prev, newConnection];
-          console.log('Updated connections:', updated);
-          return updated;
-        });
-        alert(`Connected bubble ${fromBubble} to bubble ${toBubble}!`);
-      } else {
-        console.log('Connection already exists');
-        alert('Connection already exists between these bubbles!');
+        setConnections(prev => [...prev, newConnection]);
       }
       
       setSelectedBubbles([]);
     } else {
       // Reset selection if more than 2 somehow
-      console.log('Resetting selection, too many selected');
       setSelectedBubbles([bubbleId]);
     }
   };
@@ -508,31 +493,22 @@ export default function Bubbles() {
   const handleBubbleClick = (bubbleId: number) => {
     if (!isConnectMode) return;
     
-    // Check if this bubble is part of an existing connection
+    // Single click only disconnects existing connections
     const existingConnection = connections.find(
       conn => conn.from === bubbleId || conn.to === bubbleId
     );
     
     if (existingConnection) {
-      // Remove the connection
       setConnections(prev => prev.filter(conn => conn.id !== existingConnection.id));
     }
   };
 
   const renderConnections = () => {
-    console.log('Rendering connections:', connections.length, 'connections');
-    console.log('Available bubbles:', bubbles.map(b => b.id));
-    
     return connections.map(connection => {
       const fromBubble = bubbles.find(b => b.id === connection.from);
       const toBubble = bubbles.find(b => b.id === connection.to);
       
-      console.log('Connection:', connection.id, 'from:', fromBubble?.id, 'to:', toBubble?.id);
-      
-      if (!fromBubble || !toBubble) {
-        console.log('Missing bubble for connection:', connection.id);
-        return null;
-      }
+      if (!fromBubble || !toBubble) return null;
       
       // Calculate center points of bubbles
       const fromX = fromBubble.x + fromBubble.width / 2;
@@ -554,8 +530,6 @@ export default function Bubbles() {
       const arrowHead1Y = tipY - arrowLength * Math.sin(angle - arrowAngle);
       const arrowHead2X = tipX - arrowLength * Math.cos(angle + arrowAngle);
       const arrowHead2Y = tipY - arrowLength * Math.sin(angle + arrowAngle);
-      
-      console.log('Rendering arrow from', fromX, fromY, 'to', toX, toY);
       
       return (
         <svg

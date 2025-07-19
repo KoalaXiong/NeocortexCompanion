@@ -129,6 +129,8 @@ The application uses four main tables:
   - Arrow connections with purple lines and triangle arrow heads pointing to target bubble
   - Smooth interaction flow: double-click to select → double-click second bubble to connect → single click to disconnect
   - Connection mode disables dragging to prevent accidental movement during selection
+  - Fixed click behavior: single click only disconnects, double click only creates connections
+  - Clear separation between connection creation (double-click) and disconnection (single click)
 
 - **January 16, 2025**: Moved category selection dropdown to keyword area
   - Category selection dropdown now positioned next to keyword input for better workflow
