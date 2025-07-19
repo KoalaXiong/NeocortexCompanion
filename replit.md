@@ -152,6 +152,14 @@ The application uses four main tables:
   - Tag badges show connection group names and bubble count with color coding
   - Tags fallback to generic names "Group No.1", "Group No.2" if no keywords found in chain
 
+- **January 19, 2025**: Removed category/tag system and simplified to keywords-only
+  - Eliminated "Sort by Tag" functionality from Article page
+  - Removed all category/tag references from both Bubble and Article pages
+  - Bubbles now only display keywords (titles) without category tags
+  - Simplified BubbleCard component by removing category dropdown menus
+  - Cleaned up unused category helper functions (getCategoryColor, getCategoryLabel)
+  - Streamlined UI to focus on keyword-based organization instead of category system
+
 - **January 16, 2025**: Moved category selection dropdown to keyword area
   - Category selection dropdown now positioned next to keyword input for better workflow
   - Gray tag icon for empty categories opens full category selection menu

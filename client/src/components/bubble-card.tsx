@@ -3,14 +3,14 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { GripVertical, Palette, Tag, Plus } from "lucide-react";
+import { GripVertical, Palette, Plus } from "lucide-react";
 import type { BubbleWithMessage } from "@shared/schema";
 
 interface BubbleCardProps {
   bubble: BubbleWithMessage;
   onMove: (bubbleId: number, x: number, y: number) => void;
   onColorChange?: (bubbleId: number, color: string) => void;
-  onCategoryChange?: (bubbleId: number, category: string) => void;
+
   onTitleChange?: (bubbleId: number, title: string) => void;
   isCompact?: boolean; // Whether bubble is in compact mode
   isConnectMode?: boolean; // Whether connection mode is active
@@ -23,7 +23,7 @@ export default function BubbleCard({
   bubble, 
   onMove, 
   onColorChange, 
-  onCategoryChange, 
+
   onTitleChange, 
   isCompact = false,
   isConnectMode = false,
@@ -82,27 +82,7 @@ export default function BubbleCard({
     return colorClassMap[color as keyof typeof colorClassMap] || colorClassMap.blue;
   };
 
-  const getCategoryColor = (category: string) => {
-    const colorMap = {
-      "core-insight": "blue",
-      "supporting-evidence": "green",
-      "personal-reflection": "purple", 
-      "action-items": "orange",
-      "key-question": "red"
-    };
-    return colorMap[category as keyof typeof colorMap] || "";
-  };
 
-  const getCategoryLabel = (category: string) => {
-    const labelMap = {
-      "core-insight": "Core Insight",
-      "supporting-evidence": "Supporting Evidence",
-      "personal-reflection": "Personal Reflection",
-      "action-items": "Action Items", 
-      "key-question": "Key Question"
-    };
-    return labelMap[category as keyof typeof labelMap] || "";
-  };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -216,7 +196,7 @@ export default function BubbleCard({
   };
 
   const wordCount = bubble.message.text.split(' ').length;
-  const color = bubble.color || getCategoryColor(bubble.category) || "blue";
+  const color = bubble.color || "blue";
   const baseColorClasses = getColorClasses(color);
   
   // Apply darker color for selected bubbles
@@ -288,77 +268,7 @@ export default function BubbleCard({
                 <Plus className="w-3 h-3" />
               </button>
             )}
-            
-            {/* Category tag */}
-            {bubble.category ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <span className={`${colorClasses.bg} ${colorClasses.text} px-2 py-1 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity`}>
-                    {getCategoryLabel(bubble.category)}
-                  </span>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem onClick={() => onCategoryChange?.(bubble.id, 'core-insight')}>
-                    <div className="w-3 h-3 bg-blue-500 rounded-full mr-2" />
-                    Core Insight
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onCategoryChange?.(bubble.id, 'supporting-evidence')}>
-                    <div className="w-3 h-3 bg-green-500 rounded-full mr-2" />
-                    Supporting Evidence
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onCategoryChange?.(bubble.id, 'personal-reflection')}>
-                    <div className="w-3 h-3 bg-purple-500 rounded-full mr-2" />
-                    Personal Reflection
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onCategoryChange?.(bubble.id, 'action-items')}>
-                    <div className="w-3 h-3 bg-orange-500 rounded-full mr-2" />
-                    Action Items
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onCategoryChange?.(bubble.id, 'key-question')}>
-                    <div className="w-3 h-3 bg-red-500 rounded-full mr-2" />
-                    Key Question
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => onCategoryChange?.(bubble.id, '')}>
-                    Remove Category
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button 
-                    className="inline-flex items-center justify-center w-6 h-6 rounded-full transition-all hover:scale-110 bg-gray-100 text-gray-400 cursor-pointer"
-                    onMouseDown={(e) => e.stopPropagation()}
-                    title="Add category"
-                  >
-                    <Tag className="w-3 h-3" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem onClick={() => onCategoryChange?.(bubble.id, 'core-insight')}>
-                    <div className="w-3 h-3 bg-blue-500 rounded-full mr-2" />
-                    Core Insight
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onCategoryChange?.(bubble.id, 'supporting-evidence')}>
-                    <div className="w-3 h-3 bg-green-500 rounded-full mr-2" />
-                    Supporting Evidence
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onCategoryChange?.(bubble.id, 'personal-reflection')}>
-                    <div className="w-3 h-3 bg-purple-500 rounded-full mr-2" />
-                    Personal Reflection
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onCategoryChange?.(bubble.id, 'action-items')}>
-                    <div className="w-3 h-3 bg-orange-500 rounded-full mr-2" />
-                    Action Items
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onCategoryChange?.(bubble.id, 'key-question')}>
-                    <div className="w-3 h-3 bg-red-500 rounded-full mr-2" />
-                    Key Question
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+
           </div>
           <div className="flex items-center space-x-1" onMouseDown={(e) => e.stopPropagation()}>
             <DropdownMenu>

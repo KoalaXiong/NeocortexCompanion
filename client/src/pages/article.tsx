@@ -21,7 +21,7 @@ export default function ArticlePage() {
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [usedBubbles, setUsedBubbles] = useState<number[]>([]);
   const [currentArticleId, setCurrentArticleId] = useState<number | null>(null);
-  const [sortMode, setSortMode] = useState<'connection' | 'original' | 'keyword' | 'tag'>('connection');
+  const [sortMode, setSortMode] = useState<'connection' | 'original' | 'keyword'>('connection');
   const editorRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
@@ -106,27 +106,7 @@ export default function ArticlePage() {
     return colorClassMap[color as keyof typeof colorClassMap] || colorClassMap.blue;
   };
 
-  const getCategoryColor = (category: string) => {
-    const colorMap = {
-      "core-insight": "blue",
-      "supporting-evidence": "green", 
-      "personal-reflection": "purple",
-      "action-items": "orange",
-      "key-question": "red"
-    };
-    return colorMap[category as keyof typeof colorMap] || "blue";
-  };
 
-  const getCategoryLabel = (category: string) => {
-    const labelMap = {
-      "core-insight": "Core Insight",
-      "supporting-evidence": "Supporting Evidence",
-      "personal-reflection": "Personal Reflection", 
-      "action-items": "Action Items",
-      "key-question": "Key Question"
-    };
-    return labelMap[category as keyof typeof labelMap] || "General";
-  };
 
   // Connection-aware sorting (same logic as bubble page)
   const getConnectionOrderedBubbles = (bubblesArray: BubbleWithMessage[]) => {
@@ -290,8 +270,7 @@ export default function ArticlePage() {
         const titleA = a.title || '';
         const titleB = b.title || '';
         return titleA.localeCompare(titleB);
-      case 'tag':
-        return getCategoryLabel(a.category).localeCompare(getCategoryLabel(b.category));
+
       case 'original':
       default:
         return a.id - b.id;
@@ -442,14 +421,7 @@ export default function ArticlePage() {
               >
                 Sort by Keyword
               </Button>
-              <Button
-                variant={sortMode === 'tag' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSortMode('tag')}
-                className="text-xs"
-              >
-                Sort by Tag
-              </Button>
+
               <Button
                 variant={sortMode === 'original' ? 'default' : 'outline'}
                 size="sm"
@@ -487,16 +459,12 @@ export default function ArticlePage() {
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center space-x-2">
-                        {/* Keyword/Title */}
+                        {/* Keyword/Title only */}
                         {bubble.title && (
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getColorClasses(getCategoryColor(bubble.category)).bg} ${getColorClasses(getCategoryColor(bubble.category)).text}`}>
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
                             {bubble.title}
                           </span>
                         )}
-                        {/* Category tag */}
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getColorClasses(getCategoryColor(bubble.category)).bg} ${getColorClasses(getCategoryColor(bubble.category)).text}`}>
-                          {getCategoryLabel(bubble.category)}
-                        </span>
                       </div>
                       <div className="text-gray-400">⋮⋮</div>
                     </div>

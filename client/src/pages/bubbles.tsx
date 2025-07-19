@@ -341,17 +341,7 @@ export default function Bubbles() {
     }
   };
 
-  const handleBubbleCategoryChange = (bubbleId: number, newCategory: string) => {
-    const bubble = bubbles.find(b => b.id === bubbleId);
-    if (bubble) {
-      updateBubbleMutation.mutate({ 
-        bubbleId, 
-        x: bubble.x, 
-        y: bubble.y, 
-        category: newCategory 
-      });
-    }
-  };
+
 
   const handleBubbleTitleChange = (bubbleId: number, newTitle: string) => {
     const bubble = bubbles.find(b => b.id === bubbleId);
@@ -791,7 +781,7 @@ export default function Bubbles() {
                   bubble={bubble}
                   onMove={handleBubbleMove}
                   onColorChange={handleBubbleColorChange}
-                  onCategoryChange={handleBubbleCategoryChange}
+
                   onTitleChange={handleBubbleTitleChange}
                   isCompact={isCompactMode}
                   isConnectMode={isConnectMode}
