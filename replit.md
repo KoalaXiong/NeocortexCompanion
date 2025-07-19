@@ -122,6 +122,14 @@ The application uses four main tables:
   - Visual connections shown as purple dashed lines with connection points
   - Selected bubbles highlighted with purple ring in connection mode
 
+- **January 16, 2025**: Enhanced connection UX with double-click selection and arrow connections
+  - Double-click bubbles to select/deselect with darker color feedback
+  - Selected bubbles show darker background colors for clear visual feedback
+  - Single click connected bubbles to disconnect and remove connection lines
+  - Arrow connections with purple lines and triangle arrow heads pointing to target bubble
+  - Smooth interaction flow: double-click to select → double-click second bubble to connect → single click to disconnect
+  - Connection mode disables dragging to prevent accidental movement during selection
+
 - **January 16, 2025**: Moved category selection dropdown to keyword area
   - Category selection dropdown now positioned next to keyword input for better workflow
   - Gray tag icon for empty categories opens full category selection menu

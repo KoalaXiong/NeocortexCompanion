@@ -450,7 +450,7 @@ export default function Bubbles() {
     }
   };
 
-  const handleBubbleClick = (bubbleId: number) => {
+  const handleBubbleDoubleClick = (bubbleId: number) => {
     if (!isConnectMode) return;
     
     if (selectedBubbles.includes(bubbleId)) {
@@ -480,15 +480,26 @@ export default function Bubbles() {
           to: toBubble
         };
         setConnections(prev => [...prev, newConnection]);
-        alert("Bubbles connected!");
-      } else {
-        alert("Connection already exists between these bubbles.");
       }
       
       setSelectedBubbles([]);
     } else {
       // Reset selection if more than 2 somehow
       setSelectedBubbles([bubbleId]);
+    }
+  };
+
+  const handleBubbleClick = (bubbleId: number) => {
+    if (!isConnectMode) return;
+    
+    // Check if this bubble is part of an existing connection
+    const existingConnection = connections.find(
+      conn => conn.from === bubbleId || conn.to === bubbleId
+    );
+    
+    if (existingConnection) {
+      // Remove the connection
+      setConnections(prev => prev.filter(conn => conn.id !== existingConnection.id));
     }
   };
 
@@ -505,34 +516,51 @@ export default function Bubbles() {
       const toX = toBubble.x + toBubble.width / 2;
       const toY = toBubble.y + toBubble.height / 2;
       
+      // Calculate arrow direction
+      const angle = Math.atan2(toY - fromY, toX - fromX);
+      const arrowLength = 12;
+      const arrowAngle = Math.PI / 6; // 30 degrees
+      
+      // Arrow tip position (slightly inset from bubble edge)
+      const tipX = toX - Math.cos(angle) * 20;
+      const tipY = toY - Math.sin(angle) * 20;
+      
+      // Arrow head points
+      const arrowHead1X = tipX - arrowLength * Math.cos(angle - arrowAngle);
+      const arrowHead1Y = tipY - arrowLength * Math.sin(angle - arrowAngle);
+      const arrowHead2X = tipX - arrowLength * Math.cos(angle + arrowAngle);
+      const arrowHead2Y = tipY - arrowLength * Math.sin(angle + arrowAngle);
+      
       return (
         <svg
           key={connection.id}
           className="absolute inset-0 pointer-events-none"
           style={{ zIndex: 0 }}
         >
+          {/* Main line */}
           <line
             x1={fromX}
             y1={fromY}
-            x2={toX}
-            y2={toY}
-            stroke="#8B5CF6"
-            strokeWidth="2"
-            strokeDasharray="5,5"
-            opacity="0.7"
+            x2={tipX}
+            y2={tipY}
+            stroke="#7C3AED"
+            strokeWidth="3"
+            opacity="0.8"
           />
+          
+          {/* Arrow head */}
+          <polygon
+            points={`${tipX},${tipY} ${arrowHead1X},${arrowHead1Y} ${arrowHead2X},${arrowHead2Y}`}
+            fill="#7C3AED"
+            opacity="0.8"
+          />
+          
+          {/* Start circle */}
           <circle
             cx={fromX}
             cy={fromY}
-            r="4"
-            fill="#8B5CF6"
-            opacity="0.8"
-          />
-          <circle
-            cx={toX}
-            cy={toY}
-            r="4"
-            fill="#8B5CF6"
+            r="5"
+            fill="#7C3AED"
             opacity="0.8"
           />
         </svg>
@@ -656,6 +684,7 @@ export default function Bubbles() {
                   isConnectMode={isConnectMode}
                   isSelected={isSelected}
                   onBubbleClick={handleBubbleClick}
+                  onBubbleDoubleClick={handleBubbleDoubleClick}
                 />
               );
             })

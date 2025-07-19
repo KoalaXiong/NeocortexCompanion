@@ -15,7 +15,8 @@ interface BubbleCardProps {
   isCompact?: boolean; // Whether bubble is in compact mode
   isConnectMode?: boolean; // Whether connection mode is active
   isSelected?: boolean; // Whether bubble is selected for connection
-  onBubbleClick?: (bubbleId: number) => void; // Handle bubble click in connect mode
+  onBubbleClick?: (bubbleId: number) => void; // Handle single click in connect mode
+  onBubbleDoubleClick?: (bubbleId: number) => void; // Handle double click for selection
 }
 
 export default function BubbleCard({ 
@@ -27,7 +28,8 @@ export default function BubbleCard({
   isCompact = false,
   isConnectMode = false,
   isSelected = false,
-  onBubbleClick 
+  onBubbleClick,
+  onBubbleDoubleClick 
 }: BubbleCardProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: bubble.x, y: bubble.y });
@@ -105,10 +107,8 @@ export default function BubbleCard({
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     
-    // Handle connect mode clicks
-    if (isConnectMode && onBubbleClick) {
-      e.stopPropagation();
-      onBubbleClick(bubble.id);
+    // In connect mode, don't start dragging
+    if (isConnectMode) {
       return;
     }
     
@@ -117,6 +117,22 @@ export default function BubbleCard({
       x: e.clientX - position.x,
       y: e.clientY - position.y
     });
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isConnectMode && onBubbleClick) {
+      e.preventDefault();
+      e.stopPropagation();
+      onBubbleClick(bubble.id);
+    }
+  };
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    if (isConnectMode && onBubbleDoubleClick) {
+      e.preventDefault();
+      e.stopPropagation();
+      onBubbleDoubleClick(bubble.id);
+    }
   };
 
   useEffect(() => {
@@ -178,7 +194,14 @@ export default function BubbleCard({
 
   const wordCount = bubble.message.text.split(' ').length;
   const color = bubble.color || getCategoryColor(bubble.category) || "blue";
-  const colorClasses = getColorClasses(color);
+  const baseColorClasses = getColorClasses(color);
+  
+  // Apply darker color for selected bubbles
+  const colorClasses = isSelected ? {
+    bg: baseColorClasses.bg.replace('100', '200'),
+    text: baseColorClasses.text.replace('700', '800'),
+    border: baseColorClasses.border.replace('200', '400')
+  } : baseColorClasses;
 
   // Calculate adaptive sizing
   const normalWidth = 280;
@@ -205,6 +228,8 @@ export default function BubbleCard({
         zIndex: isDragging ? 1000 : isHovered ? 100 : isSelected ? 50 : 1,
       }}
       onMouseDown={handleMouseDown}
+      onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
