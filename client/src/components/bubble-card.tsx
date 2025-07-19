@@ -183,8 +183,8 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="p-4">
-        <div className="flex items-start justify-between mb-2">
+      <div className="p-3 h-full flex flex-col overflow-hidden">
+        <div className="flex items-start justify-between mb-2 flex-shrink-0">
           <div className="flex items-center space-x-2">
             {/* Title input field */}
             {isEditingTitle ? (
@@ -322,19 +322,28 @@ export default function BubbleCard({ bubble, onMove, onColorChange, onCategoryCh
           </div>
         </div>
         {/* Content - show full text when hovered or normal size, truncated when compact */}
-        {isCompact && !isHovered ? (
-          <p className="text-gray-600 text-xs leading-tight overflow-hidden">
-            {bubble.message.text.length > 50 ? bubble.message.text.substring(0, 50) + '...' : bubble.message.text}
-          </p>
-        ) : (
-          <p className="text-gray-800 font-medium text-sm leading-relaxed mb-3">
-            {bubble.message.text}
-          </p>
-        )}
-        <div className="flex items-center justify-between text-xs text-gray-500">
-          <span>{formatTime(bubble.message.createdAt)}</span>
-          <span>{wordCount} words</span>
+        <div className="flex-1 overflow-hidden">
+          {isCompact && !isHovered ? (
+            <p className="text-gray-600 text-xs leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
+              {bubble.message.text.length > 30 ? bubble.message.text.substring(0, 30) + '...' : bubble.message.text}
+            </p>
+          ) : (
+            <p className="text-gray-800 font-medium text-sm leading-relaxed mb-3 overflow-hidden text-ellipsis" style={{ 
+              display: '-webkit-box', 
+              WebkitLineClamp: isCompact ? 2 : 4, 
+              WebkitBoxOrient: 'vertical',
+              wordBreak: 'break-word'
+            }}>
+              {bubble.message.text}
+            </p>
+          )}
         </div>
+        {(!isCompact || isHovered) && (
+          <div className="flex items-center justify-between text-xs text-gray-500 mt-auto flex-shrink-0">
+            <span>{formatTime(bubble.message.createdAt)}</span>
+            <span>{wordCount} words</span>
+          </div>
+        )}
       </div>
     </Card>
   );

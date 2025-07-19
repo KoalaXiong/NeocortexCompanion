@@ -90,8 +90,10 @@ export default function Bubbles() {
 
   // Calculate optimal bubble size based on available space and bubble count
   const calculateOptimalBubbleSize = (totalBubbles: number) => {
-    const availableWidth = window.innerWidth - 40; // Account for margins
-    const availableHeight = window.innerHeight - 200; // Account for header
+    if (totalBubbles === 0) return { width: 280, height: 120, isCompact: false };
+    
+    const availableWidth = window.innerWidth - 60; // Account for margins and potential scrollbar
+    const availableHeight = window.innerHeight - 220; // Account for header and bottom space
     const gapX = 20;
     const gapY = 20;
     
@@ -99,17 +101,12 @@ export default function Bubbles() {
     const normalWidth = 280;
     const normalHeight = 120;
     
-    // Minimum size (compact mode)
-    const minWidth = 140;
-    const minHeight = 60;
-    
     // Calculate how many bubbles can fit at normal size
     const maxColsNormal = Math.floor(availableWidth / (normalWidth + gapX));
     const maxRowsNormal = Math.floor(availableHeight / (normalHeight + gapY));
     const maxBubblesNormal = maxColsNormal * maxRowsNormal;
     
     if (totalBubbles <= maxBubblesNormal) {
-      // Use normal size if they all fit
       return {
         width: normalWidth,
         height: normalHeight,
@@ -117,27 +114,22 @@ export default function Bubbles() {
       };
     }
     
-    // Calculate if they fit at minimum size
-    const maxColsMin = Math.floor(availableWidth / (minWidth + gapX));
-    const maxRowsMin = Math.floor(availableHeight / (minHeight + gapY));
-    const maxBubblesMin = maxColsMin * maxRowsMin;
+    // Need compact mode - calculate exact grid dimensions
+    const idealCols = Math.ceil(Math.sqrt(totalBubbles * (availableWidth / availableHeight)));
+    const actualCols = Math.max(1, Math.min(idealCols, Math.floor(availableWidth / (120 + gapX))));
+    const actualRows = Math.ceil(totalBubbles / actualCols);
     
-    if (totalBubbles <= maxBubblesMin) {
-      // Use minimum size if they fit
-      return {
-        width: minWidth,
-        height: minHeight,
-        isCompact: true
-      };
-    }
+    // Calculate exact dimensions to fit perfectly
+    const compactWidth = Math.floor((availableWidth - (actualCols - 1) * gapX) / actualCols);
+    const compactHeight = Math.floor((availableHeight - (actualRows - 1) * gapY) / actualRows);
     
-    // If even minimum size doesn't fit all, use adaptive sizing
-    const adaptiveWidth = Math.max(minWidth, Math.floor(availableWidth / maxColsMin) - gapX);
-    const adaptiveHeight = Math.max(minHeight, Math.floor(availableHeight / maxRowsMin) - gapY);
+    // Ensure minimum dimensions
+    const finalWidth = Math.max(100, Math.min(compactWidth, 200));
+    const finalHeight = Math.max(50, Math.min(compactHeight, 100));
     
     return {
-      width: adaptiveWidth,
-      height: adaptiveHeight,
+      width: finalWidth,
+      height: finalHeight,
       isCompact: true
     };
   };
@@ -445,10 +437,14 @@ export default function Bubbles() {
       <div className="flex-1 relative overflow-hidden">
         <div 
           ref={canvasRef}
-          className="absolute inset-0 p-6"
+          className="absolute inset-0 p-4 overflow-hidden"
           style={{
             backgroundImage: "radial-gradient(circle, rgba(139, 92, 246, 0.2) 1px, transparent 1px)",
-            backgroundSize: "20px 20px"
+            backgroundSize: "20px 20px",
+            width: "100vw",
+            height: "calc(100vh - 140px)",
+            maxWidth: "100%",
+            maxHeight: "100%"
           }}
         >
           {bubbles.length === 0 ? (
