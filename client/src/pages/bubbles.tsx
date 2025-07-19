@@ -96,9 +96,9 @@ export default function Bubbles() {
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     
-    // Account for header (approximately 140px) and padding
-    const availableWidth = viewportWidth - 40; // 20px padding each side
-    const availableHeight = viewportHeight - 180; // 140px header + 40px padding
+    // Account for header (approximately 140px) and padding, plus floating buttons space
+    const availableWidth = viewportWidth - 120; // Extra space for floating buttons on right
+    const availableHeight = viewportHeight - 200; // Header + padding + floating buttons space
     
     const gapX = 15;
     const gapY = 15;
@@ -174,7 +174,12 @@ export default function Bubbles() {
     });
 
     // Calculate positions for all bubbles - fill columns top to bottom
-    const maxRows = Math.floor((window.innerHeight - 200) / (bubbleHeight + gapY));
+    const viewportHeight = window.innerHeight;
+    const availableHeight = viewportHeight - 200;
+    const maxRows = Math.floor((availableHeight + gapY) / (bubbleHeight + gapY));
+    
+    if (maxRows <= 0) return; // Safety check
+    
     let currentColumn = 0;
     let currentRow = 0;
     let bubbleIndex = 0;
@@ -183,11 +188,17 @@ export default function Bubbles() {
       groupMessages.forEach((message) => {
         const x = startX + currentColumn * (bubbleWidth + gapX);
         const y = startY + currentRow * (bubbleHeight + gapY);
+        
+        // Ensure bubble stays within viewport bounds
+        const maxX = window.innerWidth - bubbleWidth - 100;
+        const maxY = availableHeight - bubbleHeight + startY;
+        const clampedX = Math.min(x, maxX);
+        const clampedY = Math.min(y, maxY);
 
         createBubbleMutation.mutate({
           messageId: message.id,
-          x: x,
-          y: y,
+          x: clampedX,
+          y: clampedY,
           width: bubbleWidth,
           height: bubbleHeight,
           category: "", // No default category - let user add manually
@@ -276,8 +287,11 @@ export default function Bubbles() {
 
       // Calculate grid layout to ensure everything fits in viewport
       const viewportHeight = window.innerHeight;
-      const availableHeight = viewportHeight - 180; // Account for header
+      const availableHeight = viewportHeight - 200; // Account for header + padding
       const maxRows = Math.floor((availableHeight + gapY) / (bubbleHeight + gapY));
+      
+      // Ensure we don't exceed available space
+      if (maxRows <= 0) return;
       
       let currentColumn = 0;
       let currentRow = 0;
@@ -289,11 +303,17 @@ export default function Bubbles() {
           
           const x = startX + currentColumn * (bubbleWidth + gapX);
           const y = startY + currentRow * (bubbleHeight + gapY);
+          
+          // Ensure bubble stays within viewport bounds
+          const maxX = window.innerWidth - bubbleWidth - 100; // Leave space for floating buttons
+          const maxY = availableHeight - bubbleHeight + startY;
+          const clampedX = Math.min(x, maxX);
+          const clampedY = Math.min(y, maxY);
 
           createBubbleMutation.mutate({
             messageId: message.id,
-            x: x,
-            y: y,
+            x: clampedX,
+            y: clampedY,
             width: bubbleWidth,
             height: bubbleHeight,
             category: "", // No default category - let user add manually
@@ -489,29 +509,29 @@ export default function Bubbles() {
           )}
         </div>
 
-        {/* Floating Tools */}
-        <div className="absolute bottom-6 right-6 space-y-3">
+        {/* Floating Tools - positioned to stay within viewport */}
+        <div className="absolute bottom-4 right-4 space-y-2 z-50">
           <Button
             onClick={handleCreateBubbles}
             size="sm"
-            className="bg-white bubble-shadow rounded-2xl p-3 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
+            className="bg-white bubble-shadow rounded-2xl p-2 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
             variant="ghost"
           >
-            <Plus className="h-5 w-5" />
+            <Plus className="h-4 w-4" />
           </Button>
           <Button
             size="sm"
-            className="bg-white bubble-shadow rounded-2xl p-3 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
+            className="bg-white bubble-shadow rounded-2xl p-2 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
             variant="ghost"
           >
-            <LinkIcon className="h-5 w-5" />
+            <LinkIcon className="h-4 w-4" />
           </Button>
           <Button
             size="sm"
-            className="bg-white bubble-shadow rounded-2xl p-3 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
+            className="bg-white bubble-shadow rounded-2xl p-2 hover:bubble-shadow-lg text-gray-600 hover:text-primary"
             variant="ghost"
           >
-            <Palette className="h-5 w-5" />
+            <Palette className="h-4 w-4" />
           </Button>
         </div>
       </div>
