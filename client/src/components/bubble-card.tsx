@@ -120,17 +120,22 @@ export default function BubbleCard({
   };
 
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isDoubleClickRef = useRef(false);
 
   const handleClick = (e: React.MouseEvent) => {
     if (isConnectMode && onBubbleClick) {
       e.preventDefault();
       e.stopPropagation();
       
-      console.log('CLICK BUBBLE:', bubble.id, 'Setting timeout...');
+      // Reset double-click flag
+      isDoubleClickRef.current = false;
+      
       // Delay the click handler to see if a double-click follows
       clickTimeoutRef.current = setTimeout(() => {
-        console.log('EXECUTING DELAYED CLICK for bubble:', bubble.id);
-        onBubbleClick(bubble.id);
+        // Only execute if it wasn't a double-click
+        if (!isDoubleClickRef.current) {
+          onBubbleClick(bubble.id);
+        }
       }, 300); // 300ms delay to detect double-click
     }
   };
@@ -140,12 +145,13 @@ export default function BubbleCard({
       e.preventDefault();
       e.stopPropagation();
       
-      console.log('DOUBLE CLICK BUBBLE:', bubble.id, 'Clearing timeout...');
-      // Clear the pending single-click handler to prevent disconnection
+      // Set flag to prevent single-click handler from executing
+      isDoubleClickRef.current = true;
+      
+      // Clear the timeout
       if (clickTimeoutRef.current) {
         clearTimeout(clickTimeoutRef.current);
         clickTimeoutRef.current = null;
-        console.log('TIMEOUT CLEARED for bubble:', bubble.id);
       }
       
       onBubbleDoubleClick(bubble.id);
