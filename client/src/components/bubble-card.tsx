@@ -225,7 +225,7 @@ export default function BubbleCard({
         width: currentWidth,
         height: currentHeight,
         userSelect: 'none',
-        zIndex: isDragging ? 1000 : isHovered ? 100 : isSelected ? 50 : 1,
+        zIndex: isDragging ? 1000 : isHovered ? 200 : isSelected ? 50 : 10,
       }}
       onMouseDown={handleMouseDown}
       onClick={handleClick}

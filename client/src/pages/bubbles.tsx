@@ -535,7 +535,7 @@ export default function Bubbles() {
         <svg
           key={connection.id}
           className="absolute inset-0 pointer-events-none"
-          style={{ zIndex: 0 }}
+          style={{ zIndex: 100 }}
         >
           {/* Main line */}
           <line
