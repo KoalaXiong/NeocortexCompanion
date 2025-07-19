@@ -60,17 +60,40 @@ export default function ArticlePage() {
     }
   }, [conversation?.name, articleTitle]);
 
-  // Update editor content when articleContent changes (for bubble drops and loading)
+  // Initialize editor content only once and handle bubble drops
   useEffect(() => {
-    if (editorRef.current && articleContent !== undefined) {
-      // Only update if content has actually changed
-      const currentContent = editorRef.current.innerHTML;
-      if (currentContent !== articleContent) {
-        // Simple content update without cursor restoration on initial load
-        editorRef.current.innerHTML = articleContent || '';
+    if (editorRef.current && !editorRef.current.hasAttribute('data-initialized')) {
+      // Set initial content or placeholder
+      if (articleContent) {
+        editorRef.current.innerHTML = articleContent;
+      } else {
+        editorRef.current.innerHTML = '<div style="color: #9ca3af; font-style: italic;">Start writing your article or drag bubbles from the sidebar...</div>';
       }
+      editorRef.current.setAttribute('data-initialized', 'true');
     }
-  }, [articleContent]);
+  }, []);
+
+  // Handle content updates from bubble drops specifically
+  const handleBubbleDrop = (bubbleId: number, bubbleText: string) => {
+    setUsedBubbles(prev => [...prev, bubbleId]);
+    
+    if (editorRef.current) {
+      // Clear placeholder text if present
+      const placeholder = editorRef.current.querySelector('[style*="color: #9ca3af"]');
+      if (placeholder) {
+        editorRef.current.innerHTML = '';
+      }
+      
+      // Add new paragraph
+      const newParagraph = document.createElement('p');
+      newParagraph.style.marginBottom = '16px';
+      newParagraph.style.lineHeight = '1.6';
+      newParagraph.textContent = bubbleText;
+      
+      editorRef.current.appendChild(newParagraph);
+      setArticleContent(editorRef.current.innerHTML);
+    }
+  };
 
   // Load existing article draft from localStorage first, then database if available
   useEffect(() => {
@@ -314,13 +337,6 @@ export default function ArticlePage() {
         return a.id - b.id;
     }
   });
-
-  const handleBubbleDrop = (bubbleId: number, bubbleText: string) => {
-    setUsedBubbles(prev => [...prev, bubbleId]);
-    
-    const newParagraph = `<p style="margin-bottom: 16px; line-height: 1.6;">${bubbleText}</p>`;
-    setArticleContent(prev => prev + newParagraph);
-  };
 
   // Word count calculation
   const updateWordCount = (content: string) => {
@@ -841,13 +857,7 @@ export default function ArticlePage() {
                   fontFamily: 'system-ui, -apple-system, sans-serif',
                   outline: 'none'
                 }}
-              >
-                {!articleContent && (
-                  <div className="text-gray-500 italic pointer-events-none">
-                    Start writing your article or drag bubbles from the sidebar...
-                  </div>
-                )}
-              </div>
+              />
 
 
             </div>
