@@ -63,11 +63,11 @@ export default function ArticlePage() {
   // Initialize editor content only once and handle bubble drops
   useEffect(() => {
     if (editorRef.current && !editorRef.current.hasAttribute('data-initialized')) {
-      // Set initial content or placeholder
-      if (articleContent) {
+      // Set initial content - if no content, leave empty for better formatting compatibility
+      if (articleContent && articleContent.trim()) {
         editorRef.current.innerHTML = articleContent;
       } else {
-        editorRef.current.innerHTML = '<div style="color: #9ca3af; font-style: italic;">Start writing your article or drag bubbles from the sidebar...</div>';
+        editorRef.current.innerHTML = '';
       }
       editorRef.current.setAttribute('data-initialized', 'true');
     }
@@ -363,15 +363,15 @@ export default function ArticlePage() {
   const insertHeading = (level: number) => {
     if (editorRef.current) {
       editorRef.current.focus();
-      const selection = window.getSelection();
       
-      // If text is selected, just format it as heading
-      if (selection?.toString()) {
-        document.execCommand('formatBlock', false, `h${level}`);
-      } else {
-        // If no text selected, format current line/paragraph as heading
-        document.execCommand('formatBlock', false, `h${level}`);
+      // Clear any placeholder content first
+      const placeholder = editorRef.current.querySelector('[style*="color: #9ca3af"]');
+      if (placeholder) {
+        editorRef.current.innerHTML = '';
       }
+      
+      // Always use formatBlock to change the current paragraph to heading
+      document.execCommand('formatBlock', false, `h${level}`);
       
       setArticleContent(editorRef.current.innerHTML);
     }
@@ -870,12 +870,19 @@ export default function ArticlePage() {
                   updateWordCount(content);
                 }}
                 onBlur={(e) => setArticleContent(e.currentTarget.innerHTML)}
+                onFocus={(e) => {
+                  // Clear placeholder on focus if editor is empty
+                  if (!e.currentTarget.textContent?.trim()) {
+                    e.currentTarget.innerHTML = '';
+                  }
+                }}
                 style={{
                   lineHeight: '1.6',
                   fontSize: '16px',
                   fontFamily: 'system-ui, -apple-system, sans-serif',
                   outline: 'none'
                 }}
+                data-placeholder="Start writing your article or drag bubbles from the sidebar..."
               />
 
 
