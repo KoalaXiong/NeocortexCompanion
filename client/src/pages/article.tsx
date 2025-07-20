@@ -364,14 +364,13 @@ export default function ArticlePage() {
     if (editorRef.current) {
       editorRef.current.focus();
       const selection = window.getSelection();
-      const selectedText = selection?.toString() || 'Heading';
       
-      // Insert heading using document.execCommand for better compatibility
-      document.execCommand('formatBlock', false, `h${level}`);
-      
-      // If no text was selected, insert placeholder text
-      if (!selection?.toString()) {
-        document.execCommand('insertText', false, selectedText);
+      // If text is selected, just format it as heading
+      if (selection?.toString()) {
+        document.execCommand('formatBlock', false, `h${level}`);
+      } else {
+        // If no text selected, format current line/paragraph as heading
+        document.execCommand('formatBlock', false, `h${level}`);
       }
       
       setArticleContent(editorRef.current.innerHTML);
