@@ -75,7 +75,11 @@ export default function MessageBubble({
   const hasKeyword = currentKeyword.length > 0;
 
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} group relative`}>
+    <div className={`flex ${
+      isEditingMessage 
+        ? 'justify-center' 
+        : isUser ? 'justify-end' : 'justify-start'
+    } group relative`}>
       {isSelectable && (
         <div className="flex items-center justify-start mt-2 mr-2">
           <button
@@ -93,7 +97,11 @@ export default function MessageBubble({
           </button>
         </div>
       )}
-      <div className={`max-w-xs md:max-w-md rounded-2xl px-4 py-3 shadow-sm transition-all relative group ${
+      <div className={`${
+        isEditingMessage 
+          ? 'max-w-4xl w-full' 
+          : 'max-w-xs md:max-w-md'
+      } rounded-2xl px-4 py-3 shadow-sm transition-all relative group ${
         isSelected ? 'ring-2 ring-primary ring-offset-2' : ''
       } ${
         isUser 
