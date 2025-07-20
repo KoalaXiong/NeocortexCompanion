@@ -370,8 +370,72 @@ export default function ArticlePage() {
         editorRef.current.innerHTML = '';
       }
       
-      // Always use formatBlock to change the current paragraph to heading
-      document.execCommand('formatBlock', false, `h${level}`);
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        
+        // Get the text content from the selection or current line
+        let textContent = '';
+        if (selection.toString()) {
+          textContent = selection.toString();
+        } else {
+          // Get the text of the current paragraph/line
+          let container = range.startContainer;
+          if (container.nodeType === Node.TEXT_NODE) {
+            container = container.parentNode;
+          }
+          
+          // Find the containing block element
+          while (container && container !== editorRef.current && 
+                 !['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(container.nodeName)) {
+            container = container.parentNode;
+          }
+          
+          if (container && container !== editorRef.current) {
+            textContent = container.textContent || '';
+          }
+        }
+        
+        // Create new heading element
+        const heading = document.createElement(`h${level}`);
+        heading.style.fontSize = level === 1 ? '24px' : level === 2 ? '20px' : '18px';
+        heading.style.fontWeight = '600';
+        heading.style.marginBottom = '12px';
+        heading.style.marginTop = level === 1 ? '32px' : '24px';
+        heading.style.color = '#374151';
+        heading.textContent = textContent || 'Heading';
+        
+        if (selection.toString()) {
+          // Replace selected text with heading
+          range.deleteContents();
+          range.insertNode(heading);
+        } else {
+          // Replace current paragraph with heading
+          let container = range.startContainer;
+          if (container.nodeType === Node.TEXT_NODE) {
+            container = container.parentNode;
+          }
+          
+          while (container && container !== editorRef.current && 
+                 !['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(container.nodeName)) {
+            container = container.parentNode;
+          }
+          
+          if (container && container !== editorRef.current) {
+            container.parentNode.replaceChild(heading, container);
+          } else {
+            // If no container found, just insert the heading
+            range.insertNode(heading);
+          }
+        }
+        
+        // Position cursor at end of heading
+        const newRange = document.createRange();
+        newRange.selectNodeContents(heading);
+        newRange.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+      }
       
       setArticleContent(editorRef.current.innerHTML);
     }

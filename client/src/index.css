@@ -10,6 +10,31 @@
   pointer-events: none;
 }
 
+/* Ensure heading styles in content editable */
+[contenteditable] h1 {
+  font-size: 24px !important;
+  font-weight: 600 !important;
+  margin-bottom: 12px !important;
+  margin-top: 32px !important;
+  color: #374151 !important;
+}
+
+[contenteditable] h2 {
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  margin-bottom: 12px !important;
+  margin-top: 24px !important;
+  color: #374151 !important;
+}
+
+[contenteditable] h3 {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  margin-bottom: 12px !important;
+  margin-top: 24px !important;
+  color: #374151 !important;
+}
+
 :root {
   --background: hsl(0, 0%, 100%);
   --foreground: hsl(20, 14.3%, 4.1%);
