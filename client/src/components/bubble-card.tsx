@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { GripVertical, Palette, Plus } from "lucide-react";
+import { GripVertical, Palette, Plus, Volume2 } from "lucide-react";
 import type { BubbleWithMessage } from "@shared/schema";
 
 interface BubbleCardProps {
@@ -37,6 +37,7 @@ export default function BubbleCard({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [localTitle, setLocalTitle] = useState(bubble.title || "");
   const [isHovered, setIsHovered] = useState(false);
+  const [isReading, setIsReading] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   
   // Update position only when bubble data changes and we're not dragging
@@ -195,6 +196,63 @@ export default function BubbleCard({
     }
   };
 
+  // Text-to-speech function for bubble cards
+  const handleReadOutLoud = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (isReading) {
+      speechSynthesis.cancel();
+      setIsReading(false);
+      return;
+    }
+
+    try {
+      setIsReading(true);
+      
+      // Detect language from message content
+      const detectLanguage = (text: string): string => {
+        if (/[\u4e00-\u9fff]/.test(text)) return 'zh';
+        if (/[àèéìíîòóùúûü]/.test(text.toLowerCase()) || 
+            /\b(quello|questo|essere|molto|tutto|anche|fare|dire|dove|come|quando|perché|cosa|dovrebbe|persone|normali)\b/i.test(text)) {
+          return 'it';
+        }
+        return 'en';
+      };
+
+      const languageCode = detectLanguage(bubble.message.text);
+      const textToRead = bubble.message.text.replace(/^\[[\w\s]+\]\s*/, ''); // Clean text
+
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(textToRead);
+        utterance.lang = languageCode;
+        
+        // Find appropriate voice for the language
+        const voices = speechSynthesis.getVoices();
+        const preferredVoice = voices.find(voice => 
+          voice.lang.startsWith(languageCode) || 
+          voice.lang.startsWith(languageCode.split('-')[0])
+        );
+        
+        if (preferredVoice) {
+          utterance.voice = preferredVoice;
+        }
+
+        utterance.rate = 0.9;
+        utterance.onend = () => setIsReading(false);
+        utterance.onerror = () => setIsReading(false);
+
+        speechSynthesis.speak(utterance);
+      } else {
+        throw new Error('Speech synthesis not supported');
+      }
+
+    } catch (error) {
+      console.error('Text-to-speech error:', error);
+      setIsReading(false);
+    }
+  };
+
   const wordCount = bubble.message.text.split(' ').length;
   const color = bubble.color || "blue";
   const baseColorClasses = getColorClasses(color);
@@ -271,6 +329,19 @@ export default function BubbleCard({
 
           </div>
           <div className="flex items-center space-x-1" onMouseDown={(e) => e.stopPropagation()}>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className={`h-6 w-6 p-0 transition-all ${
+                isReading
+                  ? 'text-green-600 hover:text-green-700' 
+                  : 'text-gray-400 hover:text-gray-600'
+              } ${isReading ? 'animate-pulse' : ''}`}
+              onClick={handleReadOutLoud}
+              title={isReading ? "Stop reading" : "Read out loud"}
+            >
+              <Volume2 className="h-3 w-3" />
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-6 w-6 p-0">

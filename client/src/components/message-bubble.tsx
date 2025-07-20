@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Lightbulb, Plus, Edit3, Check, X, Trash2, Split } from "lucide-react";
+import { Lightbulb, Plus, Edit3, Check, X, Trash2, Split, Volume2 } from "lucide-react";
 import type { MessageWithBubble } from "@shared/schema";
 
 interface MessageBubbleProps {
@@ -80,6 +80,7 @@ export default function MessageBubble({
   const [isEditingMessage, setIsEditingMessage] = useState(false);
   const [keywordValue, setKeywordValue] = useState(keyword);
   const [messageValue, setMessageValue] = useState(cleanText);
+  const [isReading, setIsReading] = useState(false);
 
   const formatTime = (date: Date | string) => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -116,6 +117,71 @@ export default function MessageBubble({
       handleKeywordSubmit();
     } else if (e.key === 'Escape') {
       handleKeywordCancel();
+    }
+  };
+
+  // Text-to-speech function using Google Translate
+  const handleReadOutLoud = async () => {
+    if (isReading) {
+      // Stop any currently playing speech
+      speechSynthesis.cancel();
+      setIsReading(false);
+      return;
+    }
+
+    try {
+      setIsReading(true);
+      
+      // Get the language code for the text
+      const getLanguageCode = (lang: string | null): string => {
+        if (!lang) return 'en';
+        const langMap: Record<string, string> = {
+          'Chinese': 'zh',
+          'English': 'en',
+          'Italian': 'it',
+          'French': 'fr',
+          'German': 'de',
+          'Spanish': 'es',
+          'Portuguese': 'pt',
+          'Russian': 'ru',
+          'Japanese': 'ja',
+          'Korean': 'ko',
+          'Arabic': 'ar'
+        };
+        return langMap[lang] || 'en';
+      };
+
+      const languageCode = getLanguageCode(messageLanguage);
+      const textToRead = cleanText;
+
+      // Use Web Speech API with appropriate language
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(textToRead);
+        utterance.lang = languageCode;
+        
+        // Find the best voice for the language
+        const voices = speechSynthesis.getVoices();
+        const preferredVoice = voices.find(voice => 
+          voice.lang.startsWith(languageCode) || 
+          voice.lang.startsWith(languageCode.split('-')[0])
+        );
+        
+        if (preferredVoice) {
+          utterance.voice = preferredVoice;
+        }
+
+        utterance.rate = 0.9;
+        utterance.onend = () => setIsReading(false);
+        utterance.onerror = () => setIsReading(false);
+
+        speechSynthesis.speak(utterance);
+      } else {
+        throw new Error('Speech synthesis not supported');
+      }
+
+    } catch (error) {
+      console.error('Text-to-speech error:', error);
+      setIsReading(false);
     }
   };
 
@@ -268,6 +334,21 @@ export default function MessageBubble({
                 <Edit3 className="w-3 h-3" />
               </button>
             )}
+            <button
+              onClick={handleReadOutLoud}
+              className={`p-1 rounded-full transition-all ${
+                isReading
+                  ? isUser 
+                    ? 'bg-green-500/30 text-green-200' 
+                    : 'bg-green-100 text-green-600'
+                  : isUser 
+                    ? 'bg-white/20 hover:bg-white/30 text-white' 
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+              } ${isReading ? 'animate-pulse' : ''}`}
+              title={isReading ? "Stop reading" : "Read out loud"}
+            >
+              <Volume2 className="w-3 h-3" />
+            </button>
           </div>
         )}
 
