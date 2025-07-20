@@ -184,18 +184,22 @@ export default function MessageBubble({
               value={messageValue}
               onChange={(e) => setMessageValue(e.target.value)}
               onKeyDown={handleMessageKeyPress}
-              className={`w-full resize-none text-sm md:text-base leading-relaxed border-0 p-0 focus:ring-0 ${
+              className={`w-full resize-none text-sm md:text-base leading-relaxed border-0 p-0 focus:ring-0 focus:outline-none ${
                 isUser 
                   ? 'bg-transparent text-white placeholder-white/60' 
                   : 'bg-transparent text-gray-900 placeholder-gray-400'
               }`}
               style={{
-                minHeight: `${Math.max(60, messageValue.split('\n').length * 24)}px`
+                minHeight: `${Math.max(120, messageValue.split('\n').length * 28 + 40)}px`,
+                height: 'auto'
               }}
               placeholder="Edit your message..."
               autoFocus
+              rows={Math.max(4, messageValue.split('\n').length + 2)}
             />
-            <div className="flex justify-end space-x-2 pt-2 border-t border-white/20">
+            <div className={`flex justify-end space-x-2 pt-2 border-t ${
+              isUser ? 'border-white/20' : 'border-gray-200'
+            }`}>
               <Button
                 size="sm"
                 variant="ghost"
