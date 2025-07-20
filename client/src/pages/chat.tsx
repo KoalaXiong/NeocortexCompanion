@@ -319,13 +319,19 @@ export default function Chat() {
     
     setIsTranslating(true);
     try {
-      // Filter to only original messages (no language prefixes AND no translatedFrom metadata)
+      // Filter to only original messages in the source language
       const originalMessages = messages.filter(message => {
         // Skip messages that start with language prefixes like [English], [Italian], etc
         const hasLanguagePrefix = /^\[[\w\s]+\]/.test(message.text);
         // Skip messages that are translations (have translatedFrom field)
         const isTranslation = message.translatedFrom != null;
-        return !hasLanguagePrefix && !isTranslation;
+        // Skip messages that don't match the source language
+        const messageLanguage = message.originalLanguage || 
+          (/[\u4e00-\u9fff]/.test(message.text) ? 'zh' : 
+           /[a-zA-Z]/.test(message.text) ? 'en' : null);
+        const matchesSourceLanguage = messageLanguage === sourceLanguage;
+        
+        return !hasLanguagePrefix && !isTranslation && matchesSourceLanguage;
       });
 
       // Check if target language translations already exist (both old prefix format and new metadata format)
