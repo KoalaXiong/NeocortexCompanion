@@ -179,25 +179,28 @@ export default function MessageBubble({
 
         {/* Message Content */}
         {isEditingMessage ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Textarea
               value={messageValue}
               onChange={(e) => setMessageValue(e.target.value)}
               onKeyDown={handleMessageKeyPress}
-              className={`min-h-[60px] text-sm ${
+              className={`w-full resize-none text-sm md:text-base leading-relaxed border-0 p-0 focus:ring-0 ${
                 isUser 
-                  ? 'bg-white/10 border-white/20 text-white placeholder-white/60' 
-                  : 'bg-gray-50 border-gray-200 text-gray-900'
+                  ? 'bg-transparent text-white placeholder-white/60' 
+                  : 'bg-transparent text-gray-900 placeholder-gray-400'
               }`}
+              style={{
+                minHeight: `${Math.max(60, messageValue.split('\n').length * 24)}px`
+              }}
               placeholder="Edit your message..."
               autoFocus
             />
-            <div className="flex justify-end space-x-2">
+            <div className="flex justify-end space-x-2 pt-2 border-t border-white/20">
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={handleMessageCancel}
-                className={`h-6 px-2 text-xs ${
+                className={`h-7 px-3 text-xs ${
                   isUser 
                     ? 'hover:bg-white/20 text-white' 
                     : 'hover:bg-gray-100 text-gray-600'
@@ -210,7 +213,7 @@ export default function MessageBubble({
                 size="sm"
                 variant="ghost"
                 onClick={handleMessageSubmit}
-                className={`h-6 px-2 text-xs ${
+                className={`h-7 px-3 text-xs ${
                   isUser 
                     ? 'hover:bg-white/20 text-white' 
                     : 'hover:bg-gray-100 text-gray-600'
