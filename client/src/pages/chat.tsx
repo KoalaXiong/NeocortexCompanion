@@ -260,8 +260,7 @@ export default function Chat() {
       const newMessages = parts.slice(1).map(part => ({
         conversationId: message.conversationId,
         text: part.trim(),
-        userId: message.userId,
-        title: message.title || null
+        title: message.title || ""
       }));
 
       // Update the original message with the first part
