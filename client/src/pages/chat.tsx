@@ -267,8 +267,8 @@ export default function Chat() {
 
       // Create new messages for the remaining parts with sequential timestamps
       for (let i = 1; i < parts.length; i++) {
-        // Add a few seconds to each subsequent message to maintain order
-        const newTimestamp = new Date(originalTime.getTime() + (i * 1000));
+        // Add a few milliseconds to each subsequent message to maintain order
+        const newTimestamp = new Date(originalTime.getTime() + (i * 100));
         
         // Use direct API call to set custom timestamp
         const response = await fetch('/api/messages', {
