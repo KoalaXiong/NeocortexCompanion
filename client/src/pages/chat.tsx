@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Send, Workflow, Lightbulb, Copy, Move, Plus } from "lucide-react";
+import { ArrowLeft, Send, Workflow, Lightbulb, Copy, Move, Plus, Languages } from "lucide-react";
 import MessageBubble from "@/components/message-bubble";
 import { apiRequest } from "@/lib/queryClient";
 import type { Conversation, ConversationWithStats, MessageWithBubble, InsertMessage, InsertConversation } from "@shared/schema";
@@ -26,6 +26,10 @@ export default function Chat() {
   const [newConversationTitle, setNewConversationTitle] = useState("");
   const [targetConversationId, setTargetConversationId] = useState<string>("");
   const [removeFromOriginal, setRemoveFromOriginal] = useState(false);
+  const [showBilingualDialog, setShowBilingualDialog] = useState(false);
+  const [sourceLanguage, setSourceLanguage] = useState("zh");
+  const [targetLanguage, setTargetLanguage] = useState("en");
+  const [isTranslating, setIsTranslating] = useState(false);
   const preventAutoScroll = useRef(false);
   const savedScrollPosition = useRef<number>(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -298,6 +302,81 @@ export default function Chat() {
     }
   };
 
+  // Translation service using Google Translate
+  const translateText = async (text: string, from: string, to: string): Promise<string> => {
+    try {
+      const response = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${from}&tl=${to}&dt=t&q=${encodeURIComponent(text)}`);
+      const data = await response.json();
+      return data[0][0][0] || text;
+    } catch (error) {
+      console.error('Translation error:', error);
+      return text;
+    }
+  };
+
+  const handleBilingualTranslation = async () => {
+    if (!conversationId || messages.length === 0) return;
+    
+    setIsTranslating(true);
+    try {
+      for (const message of messages) {
+        // Skip if message already has a translation (check if next message is a translation)
+        const nextMessageIndex = messages.findIndex(m => m.id === message.id) + 1;
+        const nextMessage = messages[nextMessageIndex];
+        if (nextMessage && nextMessage.text.startsWith(`[${getLanguageName(targetLanguage)}]`)) {
+          continue;
+        }
+
+        // Translate the message
+        const translatedText = await translateText(message.text, sourceLanguage, targetLanguage);
+        const translationPrefix = `[${getLanguageName(targetLanguage)}] `;
+        
+        // Create translation message with timestamp just after original
+        const originalTime = new Date(message.createdAt);
+        const translationTimestamp = new Date(originalTime.getTime() + 50); // 50ms after original
+
+        await fetch('/api/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            conversationId: message.conversationId,
+            text: translationPrefix + translatedText,
+            title: message.title ? `${message.title} (${getLanguageName(targetLanguage)})` : "",
+            createdAt: translationTimestamp.toISOString()
+          }),
+        });
+      }
+
+      // Refresh messages
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
+      setShowBilingualDialog(false);
+    } catch (error) {
+      console.error('Failed to create bilingual conversation:', error);
+      alert('Failed to create bilingual conversation. Please try again.');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const getLanguageName = (code: string): string => {
+    const languages: Record<string, string> = {
+      'zh': 'Chinese',
+      'en': 'English', 
+      'fr': 'French',
+      'de': 'German',
+      'it': 'Italian',
+      'es': 'Spanish',
+      'pt': 'Portuguese',
+      'ru': 'Russian',
+      'ja': 'Japanese',
+      'ko': 'Korean',
+      'ar': 'Arabic'
+    };
+    return languages[code] || code;
+  };
+
   const updateMessageTitle = async (messageId: number, title: string) => {
     try {
       // Save current scroll position and set flag to prevent auto-scroll
@@ -515,6 +594,88 @@ export default function Chat() {
                 }`}
               />
             </Button>
+            
+            <Dialog open={showBilingualDialog} onOpenChange={setShowBilingualDialog}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hover:bg-white/20 text-white"
+                  title="Create bilingual conversation"
+                >
+                  <Languages className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Create Bilingual Conversation</DialogTitle>
+                  <DialogDescription>
+                    Add translations to all messages in this conversation. Translations will appear right after each original message.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">From Language (Auto-detected)</label>
+                    <Select value={sourceLanguage} onValueChange={setSourceLanguage}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="zh">Chinese</SelectItem>
+                        <SelectItem value="en">English</SelectItem>
+                        <SelectItem value="fr">French</SelectItem>
+                        <SelectItem value="de">German</SelectItem>
+                        <SelectItem value="it">Italian</SelectItem>
+                        <SelectItem value="es">Spanish</SelectItem>
+                        <SelectItem value="pt">Portuguese</SelectItem>
+                        <SelectItem value="ru">Russian</SelectItem>
+                        <SelectItem value="ja">Japanese</SelectItem>
+                        <SelectItem value="ko">Korean</SelectItem>
+                        <SelectItem value="ar">Arabic</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">To Language</label>
+                    <Select value={targetLanguage} onValueChange={setTargetLanguage}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="en">English</SelectItem>
+                        <SelectItem value="zh">Chinese</SelectItem>
+                        <SelectItem value="fr">French</SelectItem>
+                        <SelectItem value="de">German</SelectItem>
+                        <SelectItem value="it">Italian</SelectItem>
+                        <SelectItem value="es">Spanish</SelectItem>
+                        <SelectItem value="pt">Portuguese</SelectItem>
+                        <SelectItem value="ru">Russian</SelectItem>
+                        <SelectItem value="ja">Japanese</SelectItem>
+                        <SelectItem value="ko">Korean</SelectItem>
+                        <SelectItem value="ar">Arabic</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex gap-3 pt-4">
+                    <Button 
+                      onClick={() => setShowBilingualDialog(false)} 
+                      variant="outline" 
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={handleBilingualTranslation} 
+                      className="flex-1"
+                      disabled={isTranslating || sourceLanguage === targetLanguage}
+                    >
+                      {isTranslating ? 'Translating...' : 'Create Bilingual'}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+            
             {conversationId && (
               <Button
                 variant="ghost"
