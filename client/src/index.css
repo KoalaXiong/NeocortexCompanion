@@ -35,6 +35,15 @@
   color: #374151 !important;
 }
 
+/* Ensure paragraph styles in content editable */
+[contenteditable] p {
+  font-size: 16px !important;
+  font-weight: normal !important;
+  margin-bottom: 16px !important;
+  line-height: 1.6 !important;
+  color: #374151 !important;
+}
+
 :root {
   --background: hsl(0, 0%, 100%);
   --foreground: hsl(20, 14.3%, 4.1%);
