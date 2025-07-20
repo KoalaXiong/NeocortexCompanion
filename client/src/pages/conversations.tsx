@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Home, Plus, Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Home, Plus, Search, Upload, FileText } from "lucide-react";
 import ConversationCard from "@/components/conversation-card";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +21,19 @@ export default function Conversations() {
   const [newName, setNewName] = useState("");
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  
+  // Import states
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importStep, setImportStep] = useState<'upload' | 'encoding' | 'preview' | 'confirm'>('upload');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileContent, setFileContent] = useState("");
+  const [selectedEncoding, setSelectedEncoding] = useState("UTF-8");
+  const [parsedConversations, setParsedConversations] = useState<{
+    date: string;
+    name: string;
+    messages: { text: string; timestamp: string }[];
+  }[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: conversations = [], isLoading } = useQuery<ConversationWithStats[]>({
     queryKey: ["/api/conversations"],
@@ -103,6 +117,201 @@ export default function Conversations() {
     }
   };
 
+  // Import functionality
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setSelectedFile(file);
+    
+    // Try to read with UTF-8 first
+    try {
+      const content = await readFileWithEncoding(file, 'UTF-8');
+      setFileContent(content);
+      setImportStep('encoding');
+    } catch (error) {
+      toast({ title: "Error reading file", description: "Please try selecting an encoding", variant: "destructive" });
+    }
+  };
+
+  const readFileWithEncoding = (file: File, encoding: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result;
+        if (typeof result === 'string') {
+          resolve(result);
+        } else {
+          reject(new Error('Failed to read file'));
+        }
+      };
+      reader.onerror = () => reject(new Error('File reading failed'));
+      
+      if (encoding === 'UTF-8') {
+        reader.readAsText(file, 'utf-8');
+      } else if (encoding === 'GBK') {
+        // For GBK, we'll use UTF-8 but show user that encoding might need adjustment
+        reader.readAsText(file, 'gbk');
+      } else {
+        reader.readAsText(file, encoding.toLowerCase());
+      }
+    });
+  };
+
+  const handleEncodingChange = async (encoding: string) => {
+    if (!selectedFile) return;
+    
+    setSelectedEncoding(encoding);
+    try {
+      const content = await readFileWithEncoding(selectedFile, encoding);
+      setFileContent(content);
+    } catch (error) {
+      toast({ title: "Error with encoding", description: `Failed to read with ${encoding}`, variant: "destructive" });
+    }
+  };
+
+  const parseContentByDate = (content: string) => {
+    const lines = content.split('\n');
+    const conversationsByDate: { [key: string]: { text: string; timestamp: string }[] } = {};
+    
+    // Date patterns - matching various formats
+    const datePatterns = [
+      /(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2}):(\d{1,2})\s*(AM|PM)?/g,
+      /(\d{4})_(\d{1,2})-(\d{1,2})/g,
+      /(\d{4})\/(\d{1,2})\/(\d{1,2})/g,
+      /(\d{1,2})\/(\d{1,2})\/(\d{4})/g
+    ];
+    
+    let currentDate = '';
+    let currentMessage = '';
+    
+    for (const line of lines) {
+      let foundDate = false;
+      
+      // Check for date patterns
+      for (const pattern of datePatterns) {
+        const match = line.match(pattern);
+        if (match) {
+          // Save previous message if exists
+          if (currentDate && currentMessage.trim()) {
+            if (!conversationsByDate[currentDate]) {
+              conversationsByDate[currentDate] = [];
+            }
+            conversationsByDate[currentDate].push({
+              text: currentMessage.trim(),
+              timestamp: new Date().toISOString()
+            });
+            currentMessage = '';
+          }
+          
+          // Extract new date
+          if (match[0].includes('-')) {
+            const parts = match[0].split(/[-\s:]/);
+            currentDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+          } else if (match[0].includes('_')) {
+            const parts = match[0].split(/[_-]/);
+            currentDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+          }
+          
+          foundDate = true;
+          break;
+        }
+      }
+      
+      if (!foundDate && line.trim()) {
+        currentMessage += (currentMessage ? '\n' : '') + line;
+      }
+    }
+    
+    // Save last message
+    if (currentDate && currentMessage.trim()) {
+      if (!conversationsByDate[currentDate]) {
+        conversationsByDate[currentDate] = [];
+      }
+      conversationsByDate[currentDate].push({
+        text: currentMessage.trim(),
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Convert to array format
+    const conversations = Object.entries(conversationsByDate).map(([date, messages]) => {
+      const dateObj = new Date(date);
+      const day = dateObj.getDate();
+      const month = dateObj.toLocaleString('en-US', { month: 'long' });
+      const year = dateObj.getFullYear();
+      
+      return {
+        date,
+        name: `${day} ${month} ${year} Talk`,
+        messages
+      };
+    });
+    
+    return conversations.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  };
+
+  const handlePreviewParse = () => {
+    if (!fileContent) return;
+    
+    const conversations = parseContentByDate(fileContent);
+    setParsedConversations(conversations);
+    setImportStep('preview');
+  };
+
+  const handleConfirmImport = async () => {
+    setImportStep('confirm');
+    
+    // Create conversations and messages
+    for (const conv of parsedConversations) {
+      try {
+        // Create conversation
+        const response = await apiRequest("POST", "/api/conversations", { name: conv.name });
+        const conversation = await response.json();
+        
+        // Create messages for this conversation
+        for (const message of conv.messages) {
+          await apiRequest("POST", "/api/messages", {
+            conversationId: conversation.id,
+            text: message.text
+          });
+        }
+      } catch (error) {
+        toast({ 
+          title: "Import error", 
+          description: `Failed to import conversation: ${conv.name}`, 
+          variant: "destructive" 
+        });
+      }
+    }
+    
+    // Refresh conversations list
+    queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+    
+    // Reset import state
+    setShowImportDialog(false);
+    setImportStep('upload');
+    setSelectedFile(null);
+    setFileContent("");
+    setParsedConversations([]);
+    
+    toast({ 
+      title: "Import successful", 
+      description: `Imported ${parsedConversations.length} conversations` 
+    });
+  };
+
+  const resetImport = () => {
+    setShowImportDialog(false);
+    setImportStep('upload');
+    setSelectedFile(null);
+    setFileContent("");
+    setParsedConversations([]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const filteredConversations = conversations
     .filter(conv => 
       conv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -150,6 +359,137 @@ export default function Conversations() {
               </div>
             </div>
             <div className="flex gap-2">
+              <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+                <DialogTrigger asChild>
+                  <Button 
+                    className="bg-white text-primary hover:bg-gray-100"
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Import to Start
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Import Conversations from File</DialogTitle>
+                  </DialogHeader>
+                  
+                  {importStep === 'upload' && (
+                    <div className="space-y-4">
+                      <div className="text-sm text-gray-600">
+                        Import HTML or TXT files with dated content to create daily conversations.
+                      </div>
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                        <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".html,.txt,.htm"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                        />
+                        <Button 
+                          onClick={() => fileInputRef.current?.click()}
+                          variant="outline"
+                        >
+                          Select HTML or TXT File
+                        </Button>
+                        <p className="text-sm text-gray-500 mt-2">
+                          Supports HTML and TXT files with date timestamps
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {importStep === 'encoding' && (
+                    <div className="space-y-4">
+                      <div className="text-sm text-gray-600">
+                        Select the character encoding for your file:
+                      </div>
+                      <Select value={selectedEncoding} onValueChange={handleEncodingChange}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="UTF-8">UTF-8 (Unicode)</SelectItem>
+                          <SelectItem value="GBK">GBK (Chinese Simplified)</SelectItem>
+                          <SelectItem value="GB2312">GB2312 (Chinese Simplified)</SelectItem>
+                          <SelectItem value="Big5">Big5 (Chinese Traditional)</SelectItem>
+                          <SelectItem value="ISO-8859-1">ISO-8859-1 (Latin-1)</SelectItem>
+                          <SelectItem value="Windows-1252">Windows-1252</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      {fileContent && (
+                        <div className="mt-4">
+                          <div className="text-sm font-medium mb-2">Preview:</div>
+                          <div className="bg-gray-100 p-3 rounded max-h-40 overflow-y-auto text-sm">
+                            {fileContent.substring(0, 500)}
+                            {fileContent.length > 500 && '...'}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="flex gap-2">
+                        <Button onClick={handlePreviewParse}>
+                          Parse Dates & Preview
+                        </Button>
+                        <Button variant="outline" onClick={resetImport}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {importStep === 'preview' && (
+                    <div className="space-y-4">
+                      <div className="text-sm text-gray-600">
+                        Found {parsedConversations.length} daily conversations:
+                      </div>
+                      
+                      <div className="space-y-3 max-h-60 overflow-y-auto">
+                        {parsedConversations.map((conv, index) => (
+                          <Card key={index} className="p-3">
+                            <div className="flex justify-between items-center mb-2">
+                              <h4 className="font-medium">{conv.name}</h4>
+                              <Badge variant="secondary">
+                                {conv.messages.length} messages
+                              </Badge>
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              Date: {conv.date}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              First message: {conv.messages[0]?.text.substring(0, 100)}...
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button onClick={handleConfirmImport}>
+                          Import All Conversations
+                        </Button>
+                        <Button variant="outline" onClick={() => setImportStep('encoding')}>
+                          Back
+                        </Button>
+                        <Button variant="outline" onClick={resetImport}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {importStep === 'confirm' && (
+                    <div className="space-y-4 text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                      <div className="text-sm text-gray-600">
+                        Importing conversations...
+                      </div>
+                    </div>
+                  )}
+                </DialogContent>
+              </Dialog>
+              
               <Button 
                 onClick={handleCreateTodayTalk}
                 disabled={createConversationMutation.isPending}
