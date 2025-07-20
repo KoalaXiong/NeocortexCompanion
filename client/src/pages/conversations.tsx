@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Home, Plus, Search, Upload, FileText } from "lucide-react";
 import ConversationCard from "@/components/conversation-card";
 import { apiRequest } from "@/lib/queryClient";
@@ -33,6 +34,7 @@ export default function Conversations() {
     name: string;
     messages: { text: string; timestamp: string }[];
   }[]>([]);
+  const [selectedConversations, setSelectedConversations] = useState<Set<number>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: conversations = [], isLoading } = useQuery<ConversationWithStats[]>({
@@ -284,10 +286,21 @@ export default function Conversations() {
   };
 
   const handleConfirmImport = async () => {
+    const selectedConvs = parsedConversations.filter((_, index) => selectedConversations.has(index));
+    
+    if (selectedConvs.length === 0) {
+      toast({ 
+        title: "No conversations selected", 
+        description: "Please select at least one conversation to import", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
     setImportStep('confirm');
     
-    // Create conversations and messages
-    for (const conv of parsedConversations) {
+    // Create conversations and messages for selected items only
+    for (const conv of selectedConvs) {
       try {
         // Create conversation
         const response = await apiRequest("POST", "/api/conversations", { name: conv.name });
@@ -318,10 +331,11 @@ export default function Conversations() {
     setSelectedFile(null);
     setFileContent("");
     setParsedConversations([]);
+    setSelectedConversations(new Set());
     
     toast({ 
       title: "Import successful", 
-      description: `Imported ${parsedConversations.length} conversations` 
+      description: `Imported ${selectedConvs.length} conversations` 
     });
   };
 
@@ -331,8 +345,27 @@ export default function Conversations() {
     setSelectedFile(null);
     setFileContent("");
     setParsedConversations([]);
+    setSelectedConversations(new Set());
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  const toggleConversationSelection = (index: number) => {
+    const newSelected = new Set(selectedConversations);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedConversations(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedConversations.size === parsedConversations.length) {
+      setSelectedConversations(new Set());
+    } else {
+      setSelectedConversations(new Set(parsedConversations.map((_, index) => index)));
     }
   };
 
@@ -466,37 +499,69 @@ export default function Conversations() {
                   
                   {importStep === 'preview' && (
                     <div className="space-y-4">
-                      <div className="text-sm text-gray-600">
-                        Found {parsedConversations.length} daily conversations:
+                      <div className="flex justify-between items-center">
+                        <div className="text-sm text-gray-600">
+                          Found {parsedConversations.length} daily conversations:
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="select-all"
+                            checked={selectedConversations.size === parsedConversations.length && parsedConversations.length > 0}
+                            onCheckedChange={toggleSelectAll}
+                          />
+                          <label htmlFor="select-all" className="text-sm text-gray-600 cursor-pointer">
+                            Select All ({selectedConversations.size}/{parsedConversations.length})
+                          </label>
+                        </div>
                       </div>
                       
                       <div className="space-y-3 max-h-60 overflow-y-auto">
                         {parsedConversations.map((conv, index) => (
-                          <Card key={index} className="p-3">
-                            <div className="flex justify-between items-center mb-2">
-                              <h4 className="font-medium">{conv.name}</h4>
-                              <Badge variant="secondary">
-                                {conv.messages.length} messages
-                              </Badge>
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              Date: {conv.date}
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              First message: {conv.messages[0]?.text.substring(0, 100)}...
-                            </div>
-                            {conv.messages.length > 1 && (
-                              <div className="text-xs text-gray-400 mt-1">
-                                + {conv.messages.length - 1} more messages
+                          <Card 
+                            key={index} 
+                            className={`p-3 cursor-pointer transition-colors ${
+                              selectedConversations.has(index) 
+                                ? 'border-primary bg-primary/5' 
+                                : 'hover:bg-gray-50'
+                            }`}
+                            onClick={() => toggleConversationSelection(index)}
+                          >
+                            <div className="flex items-start space-x-3">
+                              <Checkbox
+                                checked={selectedConversations.has(index)}
+                                onCheckedChange={() => toggleConversationSelection(index)}
+                                className="mt-1"
+                              />
+                              <div className="flex-1">
+                                <div className="flex justify-between items-center mb-2">
+                                  <h4 className="font-medium">{conv.name}</h4>
+                                  <Badge variant="secondary">
+                                    {conv.messages.length} messages
+                                  </Badge>
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Date: {conv.date}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  First message: {conv.messages[0]?.text.substring(0, 100)}...
+                                </div>
+                                {conv.messages.length > 1 && (
+                                  <div className="text-xs text-gray-400 mt-1">
+                                    + {conv.messages.length - 1} more messages
+                                  </div>
+                                )}
                               </div>
-                            )}
+                            </div>
                           </Card>
                         ))}
                       </div>
                       
                       <div className="flex gap-2">
-                        <Button onClick={handleConfirmImport}>
-                          Import All Conversations
+                        <Button 
+                          onClick={handleConfirmImport}
+                          disabled={selectedConversations.size === 0}
+                        >
+                          Import Selected ({selectedConversations.size})
                         </Button>
                         <Button variant="outline" onClick={() => setImportStep('encoding')}>
                           Back
