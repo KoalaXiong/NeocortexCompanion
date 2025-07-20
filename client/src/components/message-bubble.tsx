@@ -46,7 +46,9 @@ export default function MessageBubble({
   };
 
   const handleMessageSubmit = () => {
-    onMessageEdit?.(message.id, messageValue);
+    if (messageValue.trim() !== message.text) {
+      onMessageEdit?.(message.id, messageValue.trim());
+    }
     setIsEditingMessage(false);
   };
 

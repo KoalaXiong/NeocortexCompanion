@@ -92,12 +92,29 @@ export default function Chat() {
   const updateMessageMutation = useMutation({
     mutationFn: async ({ id, text }: { id: number; text: string }) => {
       const response = await apiRequest("PATCH", `/api/messages/${id}`, { text });
+      if (!response.ok) {
+        throw new Error('Failed to update message');
+      }
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
+    onSuccess: (updatedMessage) => {
+      // Immediately update the cache with the new message data
+      queryClient.setQueryData(
+        ["/api/conversations", conversationId, "messages"],
+        (oldData: any[]) => {
+          if (!oldData) return oldData;
+          return oldData.map(msg => 
+            msg.id === updatedMessage.id ? updatedMessage : msg
+          );
+        }
+      );
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      preventAutoScroll.current = false;
     },
+    onError: (error) => {
+      console.error('Failed to update message:', error);
+      preventAutoScroll.current = false;
+    }
   });
 
   useEffect(() => {
@@ -162,7 +179,15 @@ export default function Chat() {
     }
 
     // Update message text in the database
-    updateMessageMutation.mutate({ id: messageId, text: newText.trim() });
+    updateMessageMutation.mutate({ 
+      id: messageId, 
+      text: newText.trim() 
+    }, {
+      onSuccess: () => {
+        // Force immediate re-fetch to ensure UI updates
+        queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
+      }
+    });
   };
 
   const updateMessageTitle = async (messageId: number, title: string) => {
