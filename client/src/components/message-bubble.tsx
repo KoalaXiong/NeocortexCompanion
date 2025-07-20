@@ -46,15 +46,16 @@ export default function MessageBubble({
       // This is a translation - detect language by content
       const text = message.text;
       if (/[\u4e00-\u9fff]/.test(text)) return 'Chinese';
-      if (/[à-ÿÀ-ß]/.test(text)) return 'Italian'; // Basic check for Italian accents
+      if (/[àèéìíîòóùúûü]/.test(text.toLowerCase()) || /zione|mente|essere|quello|questo/.test(text.toLowerCase())) return 'Italian';
       return 'English'; // Default for translations
     }
     
-    // Original message - detect by content
+    // Original message - show language only if it's clearly identifiable
     const text = message.text;
     if (/[\u4e00-\u9fff]/.test(text)) return 'Chinese';
+    // Don't show English badge for original English messages unless they have clear English indicators
     
-    return null; // No language indicator
+    return null; // No language indicator for original messages
   })();
 
   // State variables

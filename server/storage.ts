@@ -368,12 +368,10 @@ export class DatabaseStorage implements IStorage {
       messageData.createdAt = new Date(message.createdAt);
     }
     console.log('Creating message with data:', messageData);
-    console.log('Creating message with data:', messageData);
     const [newMessage] = await db
       .insert(messages)
       .values(messageData)
       .returning();
-    console.log('Created message:', newMessage);
     console.log('Created message:', newMessage);
     return newMessage;
   }

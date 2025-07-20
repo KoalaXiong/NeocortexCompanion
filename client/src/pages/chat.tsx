@@ -319,11 +319,13 @@ export default function Chat() {
     
     setIsTranslating(true);
     try {
-      // Filter to only original messages (no language prefixes, or have originalLanguage metadata)
+      // Filter to only original messages (no language prefixes AND no translatedFrom metadata)
       const originalMessages = messages.filter(message => {
         // Skip messages that start with language prefixes like [English], [Italian], etc
         const hasLanguagePrefix = /^\[[\w\s]+\]/.test(message.text);
-        return !hasLanguagePrefix;
+        // Skip messages that are translations (have translatedFrom field)
+        const isTranslation = message.translatedFrom != null;
+        return !hasLanguagePrefix && !isTranslation;
       });
 
       // Check if target language translations already exist (both old prefix format and new metadata format)
@@ -347,7 +349,7 @@ export default function Chat() {
         const originalTime = new Date(message.createdAt);
         const translationTimestamp = new Date(originalTime.getTime() + 50); // 50ms after original
 
-        await fetch('/api/messages', {
+        const response = await fetch('/api/messages', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -361,6 +363,10 @@ export default function Chat() {
             createdAt: translationTimestamp.toISOString()
           }),
         });
+
+        if (!response.ok) {
+          console.error(`Failed to create translation for message ${message.id}`);
+        }
       }
 
       // Refresh messages
