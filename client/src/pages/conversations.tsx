@@ -174,52 +174,73 @@ export default function Conversations() {
     const lines = content.split('\n');
     const conversationsByDate: { [key: string]: { text: string; timestamp: string }[] } = {};
     
-    // Date patterns - matching various formats
-    const datePatterns = [
-      /(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2}):(\d{1,2})\s*(AM|PM)?/g,
-      /(\d{4})_(\d{1,2})-(\d{1,2})/g,
-      /(\d{4})\/(\d{1,2})\/(\d{1,2})/g,
-      /(\d{1,2})\/(\d{1,2})\/(\d{4})/g
-    ];
+    // Enhanced date and time patterns
+    const dateTimePattern = /(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2}):(\d{1,2})\s*(AM|PM)?/;
+    const alternativeDatePattern = /(\d{4})_(\d{1,2})-(\d{1,2})/;
     
-    let currentDate = '';
     let currentMessage = '';
+    let currentDate = '';
+    let lineBuffer = [];
     
-    for (const line of lines) {
-      let foundDate = false;
+    // First pass: identify all lines and group by timestamps
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
       
-      // Check for date patterns
-      for (const pattern of datePatterns) {
-        const match = line.match(pattern);
-        if (match) {
-          // Save previous message if exists
-          if (currentDate && currentMessage.trim()) {
-            if (!conversationsByDate[currentDate]) {
-              conversationsByDate[currentDate] = [];
-            }
-            conversationsByDate[currentDate].push({
-              text: currentMessage.trim(),
-              timestamp: new Date().toISOString()
-            });
-            currentMessage = '';
+      // Check if line contains a timestamp
+      const timestampMatch = line.match(dateTimePattern);
+      const dateOnlyMatch = line.match(alternativeDatePattern);
+      
+      if (timestampMatch) {
+        // Save previous message if exists
+        if (currentDate && currentMessage.trim()) {
+          if (!conversationsByDate[currentDate]) {
+            conversationsByDate[currentDate] = [];
           }
-          
-          // Extract new date
-          if (match[0].includes('-')) {
-            const parts = match[0].split(/[-\s:]/);
-            currentDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-          } else if (match[0].includes('_')) {
-            const parts = match[0].split(/[_-]/);
-            currentDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-          }
-          
-          foundDate = true;
-          break;
+          conversationsByDate[currentDate].push({
+            text: currentMessage.trim(),
+            timestamp: timestampMatch[0] // Use actual timestamp from file
+          });
         }
-      }
-      
-      if (!foundDate && line.trim()) {
-        currentMessage += (currentMessage ? '\n' : '') + line;
+        
+        // Extract date for grouping
+        const year = timestampMatch[1];
+        const month = timestampMatch[2].padStart(2, '0');
+        const day = timestampMatch[3].padStart(2, '0');
+        currentDate = `${year}-${month}-${day}`;
+        
+        // Start new message with content after timestamp
+        const timestampEnd = line.indexOf(timestampMatch[0]) + timestampMatch[0].length;
+        const remainingContent = line.substring(timestampEnd).trim();
+        
+        // Remove common prefixes like "AM)", "PM)", brackets, etc.
+        const cleanContent = remainingContent.replace(/^[\s\)\]]*/, '').trim();
+        currentMessage = cleanContent;
+        
+      } else if (dateOnlyMatch) {
+        // Handle date-only patterns (like 2019_06-19)
+        if (currentDate && currentMessage.trim()) {
+          if (!conversationsByDate[currentDate]) {
+            conversationsByDate[currentDate] = [];
+          }
+          conversationsByDate[currentDate].push({
+            text: currentMessage.trim(),
+            timestamp: new Date().toISOString()
+          });
+        }
+        
+        const year = dateOnlyMatch[1];
+        const month = dateOnlyMatch[2].padStart(2, '0');
+        const day = dateOnlyMatch[3].padStart(2, '0');
+        currentDate = `${year}-${month}-${day}`;
+        currentMessage = '';
+        
+      } else if (currentDate) {
+        // This is content that belongs to the current message
+        // Skip obvious system lines or formatting
+        if (!line.match(/^(koala|https?:\/\/|<|>|\[|\]|\{|\})/i)) {
+          currentMessage += (currentMessage ? '\n' : '') + line;
+        }
       }
     }
     
@@ -234,7 +255,7 @@ export default function Conversations() {
       });
     }
     
-    // Convert to array format
+    // Convert to array format with proper naming
     const conversations = Object.entries(conversationsByDate).map(([date, messages]) => {
       const dateObj = new Date(date);
       const day = dateObj.getDate();
@@ -243,12 +264,15 @@ export default function Conversations() {
       
       return {
         date,
-        name: `${day} ${month} ${year} Talk`,
-        messages
+        name: `${day} ${month} ${year} Brain Talk`,
+        messages: messages.filter(msg => msg.text.length > 0) // Remove empty messages
       };
     });
     
-    return conversations.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    // Only return conversations that have messages
+    return conversations
+      .filter(conv => conv.messages.length > 0)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   };
 
   const handlePreviewParse = () => {
@@ -461,6 +485,11 @@ export default function Conversations() {
                             <div className="text-xs text-gray-500 mt-1">
                               First message: {conv.messages[0]?.text.substring(0, 100)}...
                             </div>
+                            {conv.messages.length > 1 && (
+                              <div className="text-xs text-gray-400 mt-1">
+                                + {conv.messages.length - 1} more messages
+                              </div>
+                            )}
                           </Card>
                         ))}
                       </div>
