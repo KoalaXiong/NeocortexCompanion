@@ -75,6 +75,24 @@ export default function Chat() {
     },
   });
 
+  // Create message mutation (for splitting)
+  const createMessageMutation = useMutation({
+    mutationFn: async (messageData: any) => {
+      const response = await apiRequest("POST", "/api/messages", messageData);
+      if (!response.ok) {
+        throw new Error('Failed to create message');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+    },
+    onError: (error) => {
+      console.error('Failed to create message:', error);
+    }
+  });
+
   // Update conversation name mutation
   const updateConversationMutation = useMutation({
     mutationFn: async ({ id, name }: { id: number; name: string }) => {
@@ -218,6 +236,51 @@ export default function Chat() {
   const handleMessageDelete = (messageId: number) => {
     if (confirm('Are you sure you want to delete this message?')) {
       deleteMessageMutation.mutate(messageId);
+    }
+  };
+
+  const handleMessageSplit = async (messageId: number) => {
+    try {
+      const message = messages.find(m => m.id === messageId);
+      if (!message) return;
+
+      // Split message by line breaks, filter out empty lines
+      const parts = message.text.split('\n').filter(part => part.trim().length > 0);
+      
+      if (parts.length <= 1) {
+        alert('Message cannot be split - no line breaks found or only one non-empty part.');
+        return;
+      }
+
+      if (!confirm(`Split this message into ${parts.length} separate messages?`)) {
+        return;
+      }
+
+      // Create new messages for each part except the first one
+      const newMessages = parts.slice(1).map(part => ({
+        conversationId: message.conversationId,
+        text: part.trim(),
+        userId: message.userId,
+        title: message.title || null
+      }));
+
+      // Update the original message with the first part
+      await updateMessageMutation.mutateAsync({
+        id: messageId,
+        text: parts[0].trim()
+      });
+
+      // Create new messages for the remaining parts
+      for (const newMessage of newMessages) {
+        await createMessageMutation.mutateAsync(newMessage);
+      }
+
+      // Refresh the messages list
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
+      
+    } catch (error) {
+      console.error('Failed to split message:', error);
+      alert('Failed to split message. Please try again.');
     }
   };
 
@@ -520,6 +583,7 @@ export default function Chat() {
                 onKeywordChange={handleKeywordChange}
                 onMessageEdit={handleMessageEdit}
                 onMessageDelete={handleMessageDelete}
+                onMessageSplit={handleMessageSplit}
               />
             ))
           )}

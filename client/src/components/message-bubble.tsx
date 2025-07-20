@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Lightbulb, Plus, Edit3, Check, X, Trash2 } from "lucide-react";
+import { Lightbulb, Plus, Edit3, Check, X, Trash2, Split } from "lucide-react";
 import type { MessageWithBubble } from "@shared/schema";
 
 interface MessageBubbleProps {
@@ -15,6 +15,7 @@ interface MessageBubbleProps {
   onKeywordChange?: (messageId: number, keyword: string) => void;
   onMessageEdit?: (messageId: number, newText: string) => void;
   onMessageDelete?: (messageId: number) => void;
+  onMessageSplit?: (messageId: number) => void;
 }
 
 export default function MessageBubble({ 
@@ -26,7 +27,8 @@ export default function MessageBubble({
   onSelectionChange,
   onKeywordChange,
   onMessageEdit,
-  onMessageDelete
+  onMessageDelete,
+  onMessageSplit
 }: MessageBubbleProps) {
   const [isEditingKeyword, setIsEditingKeyword] = useState(false);
   const [isEditingMessage, setIsEditingMessage] = useState(false);
@@ -188,6 +190,19 @@ export default function MessageBubble({
                 title="Delete message"
               >
                 <Trash2 className="w-3 h-3" />
+              </button>
+            )}
+            {onMessageSplit && message.text.includes('\n') && (
+              <button
+                onClick={() => onMessageSplit(message.id)}
+                className={`p-1 rounded-full ${
+                  isUser 
+                    ? 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-200 hover:text-blue-100' 
+                    : 'bg-blue-50 hover:bg-blue-100 text-blue-500 hover:text-blue-600'
+                }`}
+                title="Split message by line breaks"
+              >
+                <Split className="w-3 h-3" />
               </button>
             )}
             {onMessageEdit && (
