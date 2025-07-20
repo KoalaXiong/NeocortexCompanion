@@ -319,17 +319,29 @@ export default function Chat() {
     
     setIsTranslating(true);
     try {
-      for (const message of messages) {
-        // Skip if message already has a translation (check if next message is a translation)
-        const nextMessageIndex = messages.findIndex(m => m.id === message.id) + 1;
-        const nextMessage = messages[nextMessageIndex];
-        if (nextMessage && nextMessage.text.startsWith(`[${getLanguageName(targetLanguage)}]`)) {
-          continue;
-        }
+      // Filter to only original messages (no language prefixes, or have originalLanguage metadata)
+      const originalMessages = messages.filter(message => {
+        // Skip messages that start with language prefixes like [English], [Italian], etc
+        const hasLanguagePrefix = /^\[[\w\s]+\]/.test(message.text);
+        return !hasLanguagePrefix;
+      });
 
-        // Translate the message
+      // Check if target language translations already exist (both old prefix format and new metadata format)
+      const existingTranslations = messages.filter(message => 
+        message.text.startsWith(`[${getLanguageName(targetLanguage)}]`) || 
+        (message.translatedFrom && detectTranslationLanguage(message.text) === targetLanguage)
+      );
+      
+      if (existingTranslations.length > 0) {
+        alert(`${getLanguageName(targetLanguage)} translations already exist in this conversation.`);
+        setShowBilingualDialog(false);
+        setIsTranslating(false);
+        return;
+      }
+
+      for (const message of originalMessages) {
+        // Translate the message text without any language prefixes
         const translatedText = await translateText(message.text, sourceLanguage, targetLanguage);
-        const translationPrefix = `[${getLanguageName(targetLanguage)}] `;
         
         // Create translation message with timestamp just after original
         const originalTime = new Date(message.createdAt);
@@ -342,8 +354,10 @@ export default function Chat() {
           },
           body: JSON.stringify({
             conversationId: message.conversationId,
-            text: translationPrefix + translatedText,
+            text: translatedText, // No language prefix in content
             title: message.title ? `${message.title} (${getLanguageName(targetLanguage)})` : "",
+            originalLanguage: null, // Mark as translation
+            translatedFrom: message.id, // Reference to original message
             createdAt: translationTimestamp.toISOString()
           }),
         });
@@ -375,6 +389,12 @@ export default function Chat() {
       'ar': 'Arabic'
     };
     return languages[code] || code;
+  };
+
+  const detectTranslationLanguage = (text: string): string => {
+    if (/[\u4e00-\u9fff]/.test(text)) return 'zh';
+    if (/[à-ÿÀ-ß]/.test(text)) return 'it'; // Basic Italian detection
+    return 'en'; // Default to English
   };
 
   const updateMessageTitle = async (messageId: number, title: string) => {

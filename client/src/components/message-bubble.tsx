@@ -30,13 +30,45 @@ export default function MessageBubble({
   onMessageDelete,
   onMessageSplit
 }: MessageBubbleProps) {
+  // Clean message text by removing language prefixes (helper function)
+  const cleanText = message.text.replace(/^\[[\w\s]+\]\s*/, '');
+  
+  // Detect language from message content and metadata
+  const messageLanguage = (() => {
+    // Check for old language prefix format
+    const prefixMatch = message.text.match(/^\[(\w+)\]/);
+    if (prefixMatch) {
+      return prefixMatch[1];
+    }
+    
+    // Check metadata (for new translations)
+    if (message.translatedFrom) {
+      // This is a translation - detect language by content
+      const text = message.text;
+      if (/[\u4e00-\u9fff]/.test(text)) return 'Chinese';
+      if (/[à-ÿÀ-ß]/.test(text)) return 'Italian'; // Basic check for Italian accents
+      return 'English'; // Default for translations
+    }
+    
+    // Original message - detect by content
+    const text = message.text;
+    if (/[\u4e00-\u9fff]/.test(text)) return 'Chinese';
+    
+    return null; // No language indicator
+  })();
+
+  // State variables
   const [isEditingKeyword, setIsEditingKeyword] = useState(false);
   const [isEditingMessage, setIsEditingMessage] = useState(false);
   const [keywordValue, setKeywordValue] = useState(keyword);
-  const [messageValue, setMessageValue] = useState(message.text);
+  const [messageValue, setMessageValue] = useState(cleanText);
 
   const formatTime = (date: Date | string) => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getCleanText = (text: string): string => {
+    return text.replace(/^\[[\w\s]+\]\s*/, '');
   };
 
   const handleKeywordSubmit = () => {
@@ -57,7 +89,7 @@ export default function MessageBubble({
   };
 
   const handleMessageCancel = () => {
-    setMessageValue(message.text);
+    setMessageValue(cleanText);
     setIsEditingMessage(false);
   };
 
@@ -273,7 +305,16 @@ export default function MessageBubble({
             </div>
           </div>
         ) : (
-          <p className="text-sm md:text-base leading-relaxed whitespace-pre-wrap">{message.text}</p>
+          <div>
+            <p className="text-sm md:text-base leading-relaxed whitespace-pre-wrap">{cleanText}</p>
+            {messageLanguage && (
+              <div className="mt-1 opacity-60">
+                <span className="text-xs bg-black/10 dark:bg-white/10 px-1.5 py-0.5 rounded">
+                  {messageLanguage}
+                </span>
+              </div>
+            )}
+          </div>
         )}
         
         {/* Time Display */}

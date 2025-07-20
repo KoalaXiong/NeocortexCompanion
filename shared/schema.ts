@@ -15,6 +15,8 @@ export const messages = pgTable("messages", {
   conversationId: integer("conversation_id").notNull(),
   text: text("text").notNull(),
   title: text("title").default("").notNull(),
+  originalLanguage: text("original_language"), // Language code for original messages, null for translations
+  translatedFrom: integer("translated_from"), // Reference to original message ID if this is a translation
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
