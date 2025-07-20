@@ -179,25 +179,25 @@ export default function MessageBubble({
 
         {/* Message Content */}
         {isEditingMessage ? (
-          <div className="space-y-3">
+          <div className="flex flex-col h-full">
             <Textarea
               value={messageValue}
               onChange={(e) => setMessageValue(e.target.value)}
               onKeyDown={handleMessageKeyPress}
-              className={`w-full resize-none text-sm md:text-base leading-relaxed border-0 p-0 focus:ring-0 focus:outline-none ${
+              className={`flex-1 w-full resize-none text-sm md:text-base leading-relaxed border-0 p-0 focus:ring-0 focus:outline-none overflow-hidden ${
                 isUser 
                   ? 'bg-transparent text-white placeholder-white/60' 
                   : 'bg-transparent text-gray-900 placeholder-gray-400'
               }`}
               style={{
-                minHeight: `${Math.max(120, messageValue.split('\n').length * 28 + 40)}px`,
-                height: 'auto'
+                minHeight: '200px',
+                height: 'auto',
+                overflow: 'auto'
               }}
               placeholder="Edit your message..."
               autoFocus
-              rows={Math.max(4, messageValue.split('\n').length + 2)}
             />
-            <div className={`flex justify-end space-x-2 pt-2 border-t ${
+            <div className={`flex justify-end space-x-2 pt-3 mt-3 border-t ${
               isUser ? 'border-white/20' : 'border-gray-200'
             }`}>
               <Button
