@@ -527,6 +527,22 @@ export default function Chat() {
     }
   }, [conversation]);
 
+  const detectMessageLanguage = (text: string): string | null => {
+    // Chinese detection
+    if (/[\u4e00-\u9fff]/.test(text)) return 'zh';
+    
+    // Italian detection - check for common Italian patterns
+    if (/[àèéìíîòóùúûü]/.test(text.toLowerCase()) || 
+        /\b(quello|questo|essere|molto|tutto|anche|fare|dire|dove|come|quando|perché|cosa|dovrebbe|persone|normali)\b/i.test(text)) {
+      return 'it';
+    }
+    
+    // Default to English for other Latin scripts
+    if (/[a-zA-Z]/.test(text)) return 'en';
+    
+    return null;
+  };
+
   const handleSendMessage = () => {
     if (!message.trim()) return;
 
@@ -537,9 +553,13 @@ export default function Chat() {
       return;
     }
 
+    // Detect the language of the new message
+    const detectedLanguage = detectMessageLanguage(message.trim());
+
     sendMessageMutation.mutate({
       conversationId,
       text: message.trim(),
+      originalLanguage: detectedLanguage, // Set the original language for new user messages
     });
   };
 

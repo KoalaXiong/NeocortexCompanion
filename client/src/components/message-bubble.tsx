@@ -50,12 +50,29 @@ export default function MessageBubble({
       return 'English'; // Default for translations
     }
     
-    // Original message - show language only if it's clearly identifiable
+    // For original messages with originalLanguage metadata, use that
+    if (message.originalLanguage) {
+      const languageMap: Record<string, string> = {
+        'zh': 'Chinese',
+        'en': 'English',
+        'it': 'Italian',
+        'fr': 'French',
+        'de': 'German',
+        'es': 'Spanish',
+        'pt': 'Portuguese',
+        'ru': 'Russian',
+        'ja': 'Japanese',
+        'ko': 'Korean',
+        'ar': 'Arabic'
+      };
+      return languageMap[message.originalLanguage] || null;
+    }
+    
+    // Legacy detection for old messages without originalLanguage metadata
     const text = message.text;
     if (/[\u4e00-\u9fff]/.test(text)) return 'Chinese';
-    // Don't show English badge for original English messages unless they have clear English indicators
     
-    return null; // No language indicator for original messages
+    return null; // No language indicator for other cases
   })();
 
   // State variables

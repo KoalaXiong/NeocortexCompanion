@@ -108,12 +108,15 @@ The application uses four main tables:
 - **January 20, 2025**: Enhanced bilingual translation system with Google Translate integration
   - Removed language prefixes from message content and moved to metadata for cleaner display
   - Added originalLanguage and translatedFrom fields to messages schema for proper translation tracking
-  - Fixed duplicate translation issue by filtering to only original messages (no language prefixes)
+  - Fixed duplicate translation issue by filtering to only original messages (no language prefixes AND no translatedFrom metadata)
   - Translation language displayed as subtle badges below message content
   - Smart detection prevents translating already translated messages
   - Each translation creates clean message text with metadata references
   - Google Translate API integration without requiring API keys
   - Support for 11 languages: Chinese, English, French, German, Italian, Spanish, Portuguese, Russian, Japanese, Korean, Arabic
+  - Added intelligent language detection for new user messages with originalLanguage field storage
+  - Enhanced Italian language detection with common word patterns and accent recognition
+  - Language badges only shown for translations, original messages show language when explicitly detected
 
 - **January 16, 2025**: Implemented adaptive bubble sizing system with align functionality
   - All bubbles now display within visible space without scrolling
