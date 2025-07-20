@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Lightbulb, Plus, Edit3, Check, X } from "lucide-react";
+import { Lightbulb, Plus, Edit3, Check, X, Trash2 } from "lucide-react";
 import type { MessageWithBubble } from "@shared/schema";
 
 interface MessageBubbleProps {
@@ -14,6 +14,7 @@ interface MessageBubbleProps {
   onSelectionChange?: (messageId: number, selected: boolean) => void;
   onKeywordChange?: (messageId: number, keyword: string) => void;
   onMessageEdit?: (messageId: number, newText: string) => void;
+  onMessageDelete?: (messageId: number) => void;
 }
 
 export default function MessageBubble({ 
@@ -24,7 +25,8 @@ export default function MessageBubble({
   keyword = "",
   onSelectionChange,
   onKeywordChange,
-  onMessageEdit
+  onMessageEdit,
+  onMessageDelete
 }: MessageBubbleProps) {
   const [isEditingKeyword, setIsEditingKeyword] = useState(false);
   const [isEditingMessage, setIsEditingMessage] = useState(false);
@@ -172,19 +174,36 @@ export default function MessageBubble({
           </div>
         )}
 
-        {/* Edit Button */}
-        {!isEditingMessage && onMessageEdit && (
-          <button
-            onClick={() => setIsEditingMessage(true)}
-            className={`absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full ${
-              isUser 
-                ? 'bg-white/20 hover:bg-white/30 text-white' 
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-            }`}
-            title="Edit message"
-          >
-            <Edit3 className="w-3 h-3" />
-          </button>
+        {/* Action Buttons */}
+        {!isEditingMessage && (
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
+            {onMessageDelete && (
+              <button
+                onClick={() => onMessageDelete(message.id)}
+                className={`p-1 rounded-full ${
+                  isUser 
+                    ? 'bg-red-500/20 hover:bg-red-500/30 text-red-200 hover:text-red-100' 
+                    : 'bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600'
+                }`}
+                title="Delete message"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            )}
+            {onMessageEdit && (
+              <button
+                onClick={() => setIsEditingMessage(true)}
+                className={`p-1 rounded-full ${
+                  isUser 
+                    ? 'bg-white/20 hover:bg-white/30 text-white' 
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                }`}
+                title="Edit message"
+              >
+                <Edit3 className="w-3 h-3" />
+              </button>
+            )}
+          </div>
         )}
 
         {/* Message Content */}

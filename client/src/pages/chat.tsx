@@ -117,6 +117,31 @@ export default function Chat() {
     }
   });
 
+  // Delete message mutation
+  const deleteMessageMutation = useMutation({
+    mutationFn: async (messageId: number) => {
+      const response = await apiRequest("DELETE", `/api/messages/${messageId}`);
+      if (!response.ok) {
+        throw new Error('Failed to delete message');
+      }
+      return messageId;
+    },
+    onSuccess: (deletedMessageId) => {
+      // Immediately remove the message from the cache
+      queryClient.setQueryData(
+        ["/api/conversations", conversationId, "messages"],
+        (oldData: any[]) => {
+          if (!oldData) return oldData;
+          return oldData.filter(msg => msg.id !== deletedMessageId);
+        }
+      );
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+    },
+    onError: (error) => {
+      console.error('Failed to delete message:', error);
+    }
+  });
+
   useEffect(() => {
     if (preventAutoScroll.current && messagesContainerRef.current) {
       // Restore saved scroll position without animation
@@ -188,6 +213,12 @@ export default function Chat() {
         queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
       }
     });
+  };
+
+  const handleMessageDelete = (messageId: number) => {
+    if (confirm('Are you sure you want to delete this message?')) {
+      deleteMessageMutation.mutate(messageId);
+    }
   };
 
   const updateMessageTitle = async (messageId: number, title: string) => {
@@ -488,6 +519,7 @@ export default function Chat() {
                 onSelectionChange={handleSelectionChange}
                 onKeywordChange={handleKeywordChange}
                 onMessageEdit={handleMessageEdit}
+                onMessageDelete={handleMessageDelete}
               />
             ))
           )}
