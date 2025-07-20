@@ -88,6 +88,18 @@ export default function Chat() {
     },
   });
 
+  // Update message mutation
+  const updateMessageMutation = useMutation({
+    mutationFn: async ({ id, text }: { id: number; text: string }) => {
+      const response = await apiRequest("PATCH", `/api/messages/${id}`, { text });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+    },
+  });
+
   useEffect(() => {
     if (preventAutoScroll.current && messagesContainerRef.current) {
       // Restore saved scroll position without animation
@@ -140,6 +152,17 @@ export default function Chat() {
 
     // Save keyword to the message in the database immediately
     updateMessageTitle(messageId, keyword);
+  };
+
+  const handleMessageEdit = (messageId: number, newText: string) => {
+    // Store the current scroll position
+    if (messagesContainerRef.current) {
+      savedScrollPosition.current = messagesContainerRef.current.scrollTop;
+      preventAutoScroll.current = true;
+    }
+
+    // Update message text in the database
+    updateMessageMutation.mutate({ id: messageId, text: newText.trim() });
   };
 
   const updateMessageTitle = async (messageId: number, title: string) => {
@@ -439,6 +462,7 @@ export default function Chat() {
                 keyword={messageKeywords.get(message.id) || message.title || ""}
                 onSelectionChange={handleSelectionChange}
                 onKeywordChange={handleKeywordChange}
+                onMessageEdit={handleMessageEdit}
               />
             ))
           )}

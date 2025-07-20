@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Lightbulb, Plus } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Lightbulb, Plus, Edit3, Check, X } from "lucide-react";
 import type { MessageWithBubble } from "@shared/schema";
 
 interface MessageBubbleProps {
@@ -11,6 +13,7 @@ interface MessageBubbleProps {
   keyword?: string;
   onSelectionChange?: (messageId: number, selected: boolean) => void;
   onKeywordChange?: (messageId: number, keyword: string) => void;
+  onMessageEdit?: (messageId: number, newText: string) => void;
 }
 
 export default function MessageBubble({ 
@@ -20,10 +23,13 @@ export default function MessageBubble({
   isSelected = false, 
   keyword = "",
   onSelectionChange,
-  onKeywordChange 
+  onKeywordChange,
+  onMessageEdit
 }: MessageBubbleProps) {
   const [isEditingKeyword, setIsEditingKeyword] = useState(false);
+  const [isEditingMessage, setIsEditingMessage] = useState(false);
   const [keywordValue, setKeywordValue] = useState(keyword);
+  const [messageValue, setMessageValue] = useState(message.text);
 
   const formatTime = (date: Date | string) => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -39,11 +45,29 @@ export default function MessageBubble({
     setIsEditingKeyword(false);
   };
 
+  const handleMessageSubmit = () => {
+    onMessageEdit?.(message.id, messageValue);
+    setIsEditingMessage(false);
+  };
+
+  const handleMessageCancel = () => {
+    setMessageValue(message.text);
+    setIsEditingMessage(false);
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleKeywordSubmit();
     } else if (e.key === 'Escape') {
       handleKeywordCancel();
+    }
+  };
+
+  const handleMessageKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && e.ctrlKey) {
+      handleMessageSubmit();
+    } else if (e.key === 'Escape') {
+      handleMessageCancel();
     }
   };
 
@@ -69,7 +93,7 @@ export default function MessageBubble({
           </button>
         </div>
       )}
-      <div className={`max-w-xs md:max-w-md rounded-2xl px-4 py-3 shadow-sm transition-all ${
+      <div className={`max-w-xs md:max-w-md rounded-2xl px-4 py-3 shadow-sm transition-all relative group ${
         isSelected ? 'ring-2 ring-primary ring-offset-2' : ''
       } ${
         isUser 
@@ -138,12 +162,77 @@ export default function MessageBubble({
           </div>
         )}
 
-        <p className="text-sm md:text-base leading-relaxed">{message.text}</p>
-        <p className={`text-xs mt-2 ${
-          isUser ? 'text-purple-200' : 'text-gray-500'
-        }`}>
-          {formatTime(message.createdAt)}
-        </p>
+        {/* Edit Button */}
+        {!isEditingMessage && onMessageEdit && (
+          <button
+            onClick={() => setIsEditingMessage(true)}
+            className={`absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full ${
+              isUser 
+                ? 'bg-white/20 hover:bg-white/30 text-white' 
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+            }`}
+            title="Edit message"
+          >
+            <Edit3 className="w-3 h-3" />
+          </button>
+        )}
+
+        {/* Message Content */}
+        {isEditingMessage ? (
+          <div className="space-y-2">
+            <Textarea
+              value={messageValue}
+              onChange={(e) => setMessageValue(e.target.value)}
+              onKeyDown={handleMessageKeyPress}
+              className={`min-h-[60px] text-sm ${
+                isUser 
+                  ? 'bg-white/10 border-white/20 text-white placeholder-white/60' 
+                  : 'bg-gray-50 border-gray-200 text-gray-900'
+              }`}
+              placeholder="Edit your message..."
+              autoFocus
+            />
+            <div className="flex justify-end space-x-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleMessageCancel}
+                className={`h-6 px-2 text-xs ${
+                  isUser 
+                    ? 'hover:bg-white/20 text-white' 
+                    : 'hover:bg-gray-100 text-gray-600'
+                }`}
+              >
+                <X className="w-3 h-3 mr-1" />
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleMessageSubmit}
+                className={`h-6 px-2 text-xs ${
+                  isUser 
+                    ? 'hover:bg-white/20 text-white' 
+                    : 'hover:bg-gray-100 text-gray-600'
+                }`}
+              >
+                <Check className="w-3 h-3 mr-1" />
+                Save
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm md:text-base leading-relaxed whitespace-pre-wrap">{message.text}</p>
+        )}
+        
+        {/* Time Display */}
+        {!isEditingMessage && (
+          <p className={`text-xs mt-2 ${
+            isUser ? 'text-purple-200' : 'text-gray-500'
+          }`}>
+            {formatTime(message.createdAt)}
+          </p>
+        )}
       </div>
     </div>
   );
