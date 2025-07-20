@@ -47,7 +47,8 @@ export const insertConversationSchema = createInsertSchema(conversations).omit({
 
 export const insertMessageSchema = createInsertSchema(messages).omit({
   id: true,
-  createdAt: true,
+}).extend({
+  createdAt: z.string().datetime().optional(),
 });
 
 export const insertBubbleSchema = createInsertSchema(bubbles).omit({

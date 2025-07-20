@@ -256,25 +256,40 @@ export default function Chat() {
         return;
       }
 
-      // Create new messages for each part except the first one
-      const newMessages = parts.slice(1).map(part => ({
-        conversationId: message.conversationId,
-        text: part.trim(),
-        title: message.title || ""
-      }));
-
+      // Get the original message timestamp and create incremental timestamps
+      const originalTime = new Date(message.createdAt);
+      
       // Update the original message with the first part
       await updateMessageMutation.mutateAsync({
         id: messageId,
         text: parts[0].trim()
       });
 
-      // Create new messages for the remaining parts
-      for (const newMessage of newMessages) {
-        await createMessageMutation.mutateAsync(newMessage);
+      // Create new messages for the remaining parts with sequential timestamps
+      for (let i = 1; i < parts.length; i++) {
+        // Add a few seconds to each subsequent message to maintain order
+        const newTimestamp = new Date(originalTime.getTime() + (i * 1000));
+        
+        // Use direct API call to set custom timestamp
+        const response = await fetch('/api/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            conversationId: message.conversationId,
+            text: parts[i].trim(),
+            title: message.title || "",
+            createdAt: newTimestamp.toISOString()
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to create message ${i}`);
+        }
       }
 
-      // Refresh the messages list
+      // Refresh the messages list to show them in correct order
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
       
     } catch (error) {
