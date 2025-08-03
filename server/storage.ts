@@ -16,7 +16,7 @@ import {
   type BubbleWithMessage
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, sql, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Conversations
@@ -48,261 +48,35 @@ export interface IStorage {
   deleteArticle(id: number): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private conversations: Map<number, Conversation>;
-  private messages: Map<number, Message>;
-  private bubbles: Map<number, Bubble>;
-  private articles: Map<number, Article>;
-  private currentIds: { conversation: number; message: number; bubble: number; article: number };
-
-  constructor() {
-    this.conversations = new Map();
-    this.messages = new Map();
-    this.bubbles = new Map();
-    this.articles = new Map();
-    this.currentIds = { conversation: 1, message: 1, bubble: 1, article: 1 };
-  }
+export class DatabaseStorage implements IStorage {
 
   // Conversations
   async getConversations(): Promise<ConversationWithStats[]> {
-    const conversationStats = Array.from(this.conversations.values()).map(conv => {
-      const conversationMessages = Array.from(this.messages.values()).filter(
-        msg => msg.conversationId === conv.id
-      );
-      const messageCount = conversationMessages.length;
-      const wordCount = conversationMessages.reduce((total, msg) => total + msg.text.split(' ').length, 0);
-      const lastMessage = conversationMessages.length > 0 
-        ? conversationMessages[conversationMessages.length - 1].text.substring(0, 100) + '...'
-        : undefined;
-
-      return {
-        ...conv,
-        messageCount,
-        wordCount,
-        lastMessage
-      };
-    });
-
-    return conversationStats.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-  }
-
-  async getConversation(id: number): Promise<Conversation | undefined> {
-    return this.conversations.get(id);
-  }
-
-  async createConversation(conversation: InsertConversation): Promise<Conversation> {
-    const id = this.currentIds.conversation++;
-    const now = new Date();
-    const newConversation: Conversation = {
-      ...conversation,
-      id,
-      createdAt: now,
-      updatedAt: now,
-    };
-    this.conversations.set(id, newConversation);
-    return newConversation;
-  }
-
-  async updateConversation(id: number, updates: Partial<InsertConversation>): Promise<Conversation> {
-    const existing = this.conversations.get(id);
-    if (!existing) throw new Error('Conversation not found');
-    
-    const updated: Conversation = {
-      ...existing,
-      ...updates,
-      updatedAt: new Date(),
-    };
-    this.conversations.set(id, updated);
-    return updated;
-  }
-
-  async deleteConversation(id: number): Promise<void> {
-    // Delete associated messages and bubbles
-    const conversationMessages = Array.from(this.messages.values())
-      .filter(msg => msg.conversationId === id);
-    
-    for (const message of conversationMessages) {
-      const messageBubbles = Array.from(this.bubbles.values())
-        .filter(bubble => bubble.messageId === message.id);
-      messageBubbles.forEach(bubble => this.bubbles.delete(bubble.id));
-      this.messages.delete(message.id);
-    }
-    
-    this.conversations.delete(id);
-  }
-
-  // Messages
-  async getMessagesByConversation(conversationId: number): Promise<MessageWithBubble[]> {
-    const conversationMessages = Array.from(this.messages.values())
-      .filter(msg => msg.conversationId === conversationId)
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-
-    return conversationMessages.map(message => {
-      const bubble = Array.from(this.bubbles.values()).find(b => b.messageId === message.id);
-      return { ...message, bubble };
-    });
-  }
-
-  async getMessage(id: number): Promise<Message | undefined> {
-    return this.messages.get(id);
-  }
-
-  async createMessage(message: InsertMessage): Promise<Message> {
-    const id = this.currentIds.message++;
-    const newMessage: Message = {
-      ...message,
-      id,
-      createdAt: new Date(),
-    };
-    this.messages.set(id, newMessage);
-
-    // Update conversation's updatedAt
-    const conversation = this.conversations.get(message.conversationId);
-    if (conversation) {
-      this.conversations.set(conversation.id, {
-        ...conversation,
-        updatedAt: new Date(),
-      });
-    }
-
-    return newMessage;
-  }
-
-  async updateMessage(id: number, updates: Partial<InsertMessage>): Promise<Message> {
-    const existing = this.messages.get(id);
-    if (!existing) throw new Error('Message not found');
-    
-    const updated: Message = { ...existing, ...updates };
-    this.messages.set(id, updated);
-    return updated;
-  }
-
-  async deleteMessage(id: number): Promise<void> {
-    // Delete associated bubble
-    const messageBubbles = Array.from(this.bubbles.values())
-      .filter(bubble => bubble.messageId === id);
-    messageBubbles.forEach(bubble => this.bubbles.delete(bubble.id));
-    
-    this.messages.delete(id);
-  }
-
-  // Bubbles
-  async getBubblesByConversation(conversationId: number): Promise<BubbleWithMessage[]> {
-    const conversationMessages = Array.from(this.messages.values())
-      .filter(msg => msg.conversationId === conversationId);
-    
-    const bubblesWithMessages: BubbleWithMessage[] = [];
-    
-    for (const message of conversationMessages) {
-      const bubble = Array.from(this.bubbles.values()).find(b => b.messageId === message.id);
-      if (bubble) {
-        bubblesWithMessages.push({ ...bubble, message });
-      }
-    }
-    
-    return bubblesWithMessages;
-  }
-
-  async getBubble(id: number): Promise<Bubble | undefined> {
-    return this.bubbles.get(id);
-  }
-
-  async createBubble(bubble: InsertBubble): Promise<Bubble> {
-    const id = this.currentIds.bubble++;
-    const newBubble: Bubble = {
-      messageId: bubble.messageId,
-      x: bubble.x ?? 0,
-      y: bubble.y ?? 0,
-      width: bubble.width ?? 280,
-      height: bubble.height ?? 120,
-      category: bubble.category ?? "general",
-      color: bubble.color ?? "blue",
-      id,
-    };
-    this.bubbles.set(id, newBubble);
-    return newBubble;
-  }
-
-  async updateBubble(id: number, updates: Partial<InsertBubble>): Promise<Bubble> {
-    const existing = this.bubbles.get(id);
-    if (!existing) throw new Error('Bubble not found');
-    
-    const updated: Bubble = { ...existing, ...updates };
-    this.bubbles.set(id, updated);
-    return updated;
-  }
-
-  async deleteBubble(id: number): Promise<void> {
-    this.bubbles.delete(id);
-  }
-
-  // Articles
-  async getArticles(): Promise<Article[]> {
-    return Array.from(this.articles.values())
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-  }
-
-  async getArticle(id: number): Promise<Article | undefined> {
-    return this.articles.get(id);
-  }
-
-  async createArticle(article: InsertArticle): Promise<Article> {
-    const id = this.currentIds.article++;
-    const now = new Date();
-    const newArticle: Article = {
-      title: article.title,
-      content: article.content,
-      bubbleIds: Array.isArray(article.bubbleIds) ? article.bubbleIds : [],
-      id,
-      createdAt: now,
-      updatedAt: now,
-    };
-    this.articles.set(id, newArticle);
-    return newArticle;
-  }
-
-  async updateArticle(id: number, updates: Partial<InsertArticle>): Promise<Article> {
-    const existing = this.articles.get(id);
-    if (!existing) throw new Error('Article not found');
-    
-    const updated: Article = {
-      title: updates.title ?? existing.title,
-      content: updates.content ?? existing.content,
-      bubbleIds: Array.isArray(updates.bubbleIds) ? updates.bubbleIds : existing.bubbleIds,
-      id: existing.id,
-      createdAt: existing.createdAt,
-      updatedAt: new Date(),
-    };
-    this.articles.set(id, updated);
-    return updated;
-  }
-
-  async deleteArticle(id: number): Promise<void> {
-    this.articles.delete(id);
-  }
-}
-
-export class DatabaseStorage implements IStorage {
-  async getConversations(): Promise<ConversationWithStats[]> {
-    const conversationList = await db.select().from(conversations).orderBy(desc(conversations.updatedAt));
+    const conversationList = await db.select().from(conversations);
     
     const conversationStats = await Promise.all(
-      conversationList.map(async (conversation) => {
-        const messageList = await db.select().from(messages).where(eq(messages.conversationId, conversation.id));
-        const messageCount = messageList.length;
-        const wordCount = messageList.reduce((total, message) => total + message.text.split(' ').length, 0);
-        const lastMessage = messageList.length > 0 ? messageList[messageList.length - 1].text.substring(0, 50) + '...' : undefined;
+      conversationList.map(async (conv) => {
+        const conversationMessages = await db
+          .select()
+          .from(messages)
+          .where(eq(messages.conversationId, conv.id));
         
+        const messageCount = conversationMessages.length;
+        const wordCount = conversationMessages.reduce((total, msg) => total + msg.text.split(' ').length, 0);
+        const lastMessage = conversationMessages.length > 0 
+          ? conversationMessages[conversationMessages.length - 1].text.substring(0, 100) + '...'
+          : undefined;
+
         return {
-          ...conversation,
+          ...conv,
           messageCount,
           wordCount,
-          lastMessage,
+          lastMessage
         };
       })
     );
-    
-    return conversationStats;
+
+    return conversationStats.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }
 
   async getConversation(id: number): Promise<Conversation | undefined> {
@@ -311,46 +85,60 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createConversation(conversation: InsertConversation): Promise<Conversation> {
+    const now = new Date().toISOString();
     const [newConversation] = await db
       .insert(conversations)
-      .values(conversation)
+      .values({
+        ...conversation,
+        createdAt: now,
+        updatedAt: now,
+      })
       .returning();
     return newConversation;
   }
 
   async updateConversation(id: number, updates: Partial<InsertConversation>): Promise<Conversation> {
+    const updatedAt = new Date().toISOString();
     const [updated] = await db
       .update(conversations)
-      .set({ ...updates, updatedAt: new Date() })
+      .set({ ...updates, updatedAt })
       .where(eq(conversations.id, id))
       .returning();
+    
+    if (!updated) throw new Error('Conversation not found');
     return updated;
   }
 
   async deleteConversation(id: number): Promise<void> {
-    // Delete related messages and bubbles first
-    const messageList = await db.select().from(messages).where(eq(messages.conversationId, id));
-    for (const message of messageList) {
+    // Delete associated messages and bubbles
+    const conversationMessages = await db
+      .select()
+      .from(messages)
+      .where(eq(messages.conversationId, id));
+    
+    for (const message of conversationMessages) {
       await db.delete(bubbles).where(eq(bubbles.messageId, message.id));
     }
+    
     await db.delete(messages).where(eq(messages.conversationId, id));
     await db.delete(conversations).where(eq(conversations.id, id));
   }
 
+  // Messages
   async getMessagesByConversation(conversationId: number): Promise<MessageWithBubble[]> {
-    const messageList = await db
+    const conversationMessages = await db
       .select()
       .from(messages)
       .where(eq(messages.conversationId, conversationId))
       .orderBy(messages.createdAt);
 
     const messagesWithBubbles = await Promise.all(
-      messageList.map(async (message) => {
-        const [bubble] = await db.select().from(bubbles).where(eq(bubbles.messageId, message.id));
-        return {
-          ...message,
-          bubble: bubble || undefined,
-        };
+      conversationMessages.map(async (message) => {
+        const [bubble] = await db
+          .select()
+          .from(bubbles)
+          .where(eq(bubbles.messageId, message.id));
+        return { ...message, bubble: bubble || undefined };
       })
     );
 
@@ -363,16 +151,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMessage(message: InsertMessage): Promise<Message> {
-    const messageData: any = { ...message };
-    if (message.createdAt) {
-      messageData.createdAt = new Date(message.createdAt);
-    }
-    console.log('Creating message with data:', messageData);
+    const createdAt = message.createdAt || new Date().toISOString();
+    const messageData = {
+      ...message,
+      createdAt,
+    };
+    console.log("Creating message with data:", messageData);
+    
     const [newMessage] = await db
       .insert(messages)
       .values(messageData)
       .returning();
-    console.log('Created message:', newMessage);
+    
+    console.log("Created message:", newMessage);
+
+    // Update conversation's updatedAt
+    await db
+      .update(conversations)
+      .set({ updatedAt: new Date().toISOString() })
+      .where(eq(conversations.id, message.conversationId));
+
     return newMessage;
   }
 
@@ -382,28 +180,38 @@ export class DatabaseStorage implements IStorage {
       .set(updates)
       .where(eq(messages.id, id))
       .returning();
+    
+    if (!updated) throw new Error('Message not found');
     return updated;
   }
 
   async deleteMessage(id: number): Promise<void> {
+    // Delete associated bubble first
     await db.delete(bubbles).where(eq(bubbles.messageId, id));
     await db.delete(messages).where(eq(messages.id, id));
   }
 
+  // Bubbles
   async getBubblesByConversation(conversationId: number): Promise<BubbleWithMessage[]> {
-    const bubbleList = await db
-      .select({
-        bubble: bubbles,
-        message: messages,
-      })
-      .from(bubbles)
-      .innerJoin(messages, eq(bubbles.messageId, messages.id))
+    const conversationMessages = await db
+      .select()
+      .from(messages)
       .where(eq(messages.conversationId, conversationId));
 
-    return bubbleList.map(({ bubble, message }) => ({
-      ...bubble,
-      message,
-    }));
+    const bubblesWithMessages: BubbleWithMessage[] = [];
+    
+    for (const message of conversationMessages) {
+      const [bubble] = await db
+        .select()
+        .from(bubbles)
+        .where(eq(bubbles.messageId, message.id));
+      
+      if (bubble) {
+        bubblesWithMessages.push({ ...bubble, message });
+      }
+    }
+    
+    return bubblesWithMessages;
   }
 
   async getBubble(id: number): Promise<Bubble | undefined> {
@@ -425,6 +233,8 @@ export class DatabaseStorage implements IStorage {
       .set(updates)
       .where(eq(bubbles.id, id))
       .returning();
+    
+    if (!updated) throw new Error('Bubble not found');
     return updated;
   }
 
@@ -432,6 +242,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(bubbles).where(eq(bubbles.id, id));
   }
 
+  // Articles
   async getArticles(): Promise<Article[]> {
     return await db.select().from(articles).orderBy(desc(articles.createdAt));
   }
@@ -442,19 +253,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createArticle(article: InsertArticle): Promise<Article> {
+    const now = new Date().toISOString();
     const [newArticle] = await db
       .insert(articles)
-      .values(article)
+      .values({
+        ...article,
+        createdAt: now,
+        updatedAt: now,
+      })
       .returning();
     return newArticle;
   }
 
   async updateArticle(id: number, updates: Partial<InsertArticle>): Promise<Article> {
+    const updatedAt = new Date().toISOString();
     const [updated] = await db
       .update(articles)
-      .set({ ...updates, updatedAt: new Date() })
+      .set({ ...updates, updatedAt })
       .where(eq(articles.id, id))
       .returning();
+    
+    if (!updated) throw new Error('Article not found');
     return updated;
   }
 
