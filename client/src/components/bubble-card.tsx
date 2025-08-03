@@ -264,11 +264,12 @@ export default function BubbleCard({
     border: baseColorClasses.border.replace('200', '400')
   } : baseColorClasses;
 
-  // Calculate adaptive sizing
+  // Calculate adaptive sizing - increase height when hovered to show full content
   const normalWidth = 280;
   const normalHeight = 120;
+  const hoveredHeight = Math.max(normalHeight, Math.min(300, bubble.message.text.length / 3 + 120)); // Dynamic height based on content
   const currentWidth = isCompact && !isHovered ? bubble.width : normalWidth;
-  const currentHeight = isCompact && !isHovered ? bubble.height : normalHeight;
+  const currentHeight = isCompact && !isHovered ? bubble.height : (isHovered ? hoveredHeight : normalHeight);
 
   return (
     <Card
@@ -375,16 +376,22 @@ export default function BubbleCard({
             <GripVertical className="h-4 w-4 text-gray-400" />
           </div>
         </div>
-        {/* Content - show full text when hovered or normal size, truncated when compact */}
+        {/* Content - show full text when hovered, truncated when compact and not hovered */}
         <div className="flex-1 overflow-hidden">
           {isCompact && !isHovered ? (
             <p className="text-gray-600 text-xs leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
               {bubble.message.text.length > 30 ? bubble.message.text.substring(0, 30) + '...' : bubble.message.text}
             </p>
+          ) : isHovered ? (
+            <div className="text-gray-800 font-medium text-sm leading-relaxed mb-3 overflow-auto max-h-40" style={{ 
+              wordBreak: 'break-word'
+            }}>
+              {bubble.message.text}
+            </div>
           ) : (
             <p className="text-gray-800 font-medium text-sm leading-relaxed mb-3 overflow-hidden text-ellipsis" style={{ 
               display: '-webkit-box', 
-              WebkitLineClamp: isCompact ? 2 : 4, 
+              WebkitLineClamp: 4, 
               WebkitBoxOrient: 'vertical',
               wordBreak: 'break-word'
             }}>
