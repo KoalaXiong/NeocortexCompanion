@@ -292,7 +292,24 @@ export default function MessageBubble({
           </div>
         )}
 
-        {/* Action Buttons */}
+        {/* Delete Button - Left Side */}
+        {!isEditingMessage && onMessageDelete && (
+          <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={() => onMessageDelete(message.id)}
+              className={`p-1 rounded-full ${
+                isUser 
+                  ? 'bg-red-500/20 hover:bg-red-500/30 text-red-200 hover:text-red-100' 
+                  : 'bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600'
+              }`}
+              title="Delete message"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          </div>
+        )}
+
+        {/* Other Action Buttons - Right Side */}
         {!isEditingMessage && (
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
             <button
@@ -334,19 +351,6 @@ export default function MessageBubble({
                 title="Edit message"
               >
                 <Edit3 className="w-3 h-3" />
-              </button>
-            )}
-            {onMessageDelete && (
-              <button
-                onClick={() => onMessageDelete(message.id)}
-                className={`p-1 rounded-full ${
-                  isUser 
-                    ? 'bg-red-500/20 hover:bg-red-500/30 text-red-200 hover:text-red-100' 
-                    : 'bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600'
-                }`}
-                title="Delete message"
-              >
-                <Trash2 className="w-3 h-3" />
               </button>
             )}
           </div>
