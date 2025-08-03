@@ -3,14 +3,14 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { GripVertical, Palette, Plus, Volume2 } from "lucide-react";
+import { GripVertical, Palette, Plus, Volume2, Trash2 } from "lucide-react";
 import type { BubbleWithMessage } from "@shared/schema";
 
 interface BubbleCardProps {
   bubble: BubbleWithMessage;
   onMove: (bubbleId: number, x: number, y: number) => void;
   onColorChange?: (bubbleId: number, color: string) => void;
-
+  onDelete?: (bubbleId: number) => void;
   onTitleChange?: (bubbleId: number, title: string) => void;
   isCompact?: boolean; // Whether bubble is in compact mode
   isConnectMode?: boolean; // Whether connection mode is active
@@ -23,7 +23,7 @@ export default function BubbleCard({
   bubble, 
   onMove, 
   onColorChange, 
-
+  onDelete,
   onTitleChange, 
   isCompact = false,
   isConnectMode = false,
@@ -333,6 +333,17 @@ export default function BubbleCard({
 
           </div>
           <div className="flex items-center space-x-1" onMouseDown={(e) => e.stopPropagation()}>
+            {onDelete && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 w-6 p-0 text-red-400 hover:text-red-600 transition-all"
+                onClick={() => onDelete(bubble.id)}
+                title="Delete bubble"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            )}
             <Button 
               variant="ghost" 
               size="sm" 

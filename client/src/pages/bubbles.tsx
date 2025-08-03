@@ -781,7 +781,7 @@ export default function Bubbles() {
                   bubble={bubble}
                   onMove={handleBubbleMove}
                   onColorChange={handleBubbleColorChange}
-
+                  onDelete={(bubbleId) => deleteBubbleMutation.mutate(bubbleId)}
                   onTitleChange={handleBubbleTitleChange}
                   isCompact={isCompactMode}
                   isConnectMode={isConnectMode}
