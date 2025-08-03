@@ -267,7 +267,10 @@ export default function BubbleCard({
   // Calculate adaptive sizing - increase height when hovered to show full content
   const normalWidth = 280;
   const normalHeight = 120;
-  const hoveredHeight = Math.max(normalHeight, Math.min(300, bubble.message.text.length / 3 + 120)); // Dynamic height based on content
+  // Calculate dynamic height based on text length and line breaks for hovered state
+  const textLines = bubble.message.text.split('\n').length;
+  const estimatedLines = Math.ceil(bubble.message.text.length / 35) + textLines; // Approximate lines needed
+  const hoveredHeight = Math.max(normalHeight, Math.min(400, estimatedLines * 20 + 80)); // Dynamic height with more space
   const currentWidth = isCompact && !isHovered ? bubble.width : normalWidth;
   const currentHeight = isCompact && !isHovered ? bubble.height : (isHovered ? hoveredHeight : normalHeight);
 
@@ -377,14 +380,15 @@ export default function BubbleCard({
           </div>
         </div>
         {/* Content - show full text when hovered, truncated when compact and not hovered */}
-        <div className="flex-1 overflow-hidden">
+        <div className={`flex-1 ${isHovered ? 'overflow-visible' : 'overflow-hidden'}`}>
           {isCompact && !isHovered ? (
             <p className="text-gray-600 text-xs leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
               {bubble.message.text.length > 30 ? bubble.message.text.substring(0, 30) + '...' : bubble.message.text}
             </p>
           ) : isHovered ? (
-            <div className="text-gray-800 font-medium text-sm leading-relaxed mb-3 overflow-auto max-h-40" style={{ 
-              wordBreak: 'break-word'
+            <div className="text-gray-800 font-medium text-sm leading-relaxed mb-3" style={{ 
+              wordBreak: 'break-word',
+              whiteSpace: 'pre-wrap'
             }}>
               {bubble.message.text}
             </div>
