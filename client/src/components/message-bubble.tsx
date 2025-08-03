@@ -295,19 +295,21 @@ export default function MessageBubble({
         {/* Action Buttons */}
         {!isEditingMessage && (
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
-            {onMessageDelete && (
-              <button
-                onClick={() => onMessageDelete(message.id)}
-                className={`p-1 rounded-full ${
-                  isUser 
-                    ? 'bg-red-500/20 hover:bg-red-500/30 text-red-200 hover:text-red-100' 
-                    : 'bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600'
-                }`}
-                title="Delete message"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            )}
+            <button
+              onClick={handleReadOutLoud}
+              className={`p-1 rounded-full transition-all ${
+                isReading
+                  ? isUser 
+                    ? 'bg-green-500/30 text-green-200' 
+                    : 'bg-green-100 text-green-600'
+                  : isUser 
+                    ? 'bg-white/20 hover:bg-white/30 text-white' 
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+              } ${isReading ? 'animate-pulse' : ''}`}
+              title={isReading ? "Stop reading" : "Read out loud"}
+            >
+              <Volume2 className="w-3 h-3" />
+            </button>
             {onMessageSplit && message.text.includes('\n') && (
               <button
                 onClick={() => onMessageSplit(message.id)}
@@ -334,21 +336,19 @@ export default function MessageBubble({
                 <Edit3 className="w-3 h-3" />
               </button>
             )}
-            <button
-              onClick={handleReadOutLoud}
-              className={`p-1 rounded-full transition-all ${
-                isReading
-                  ? isUser 
-                    ? 'bg-green-500/30 text-green-200' 
-                    : 'bg-green-100 text-green-600'
-                  : isUser 
-                    ? 'bg-white/20 hover:bg-white/30 text-white' 
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-              } ${isReading ? 'animate-pulse' : ''}`}
-              title={isReading ? "Stop reading" : "Read out loud"}
-            >
-              <Volume2 className="w-3 h-3" />
-            </button>
+            {onMessageDelete && (
+              <button
+                onClick={() => onMessageDelete(message.id)}
+                className={`p-1 rounded-full ${
+                  isUser 
+                    ? 'bg-red-500/20 hover:bg-red-500/30 text-red-200 hover:text-red-100' 
+                    : 'bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600'
+                }`}
+                title="Delete message"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            )}
           </div>
         )}
 
