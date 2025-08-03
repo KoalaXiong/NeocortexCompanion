@@ -1,27 +1,27 @@
-import { pgTable, text, serial, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 import { z } from "zod";
 
-export const conversations = pgTable("conversations", {
-  id: serial("id").primaryKey(),
+export const conversations = sqliteTable("conversations", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text("updated_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
-export const messages = pgTable("messages", {
-  id: serial("id").primaryKey(),
+export const messages = sqliteTable("messages", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   conversationId: integer("conversation_id").notNull(),
   text: text("text").notNull(),
   title: text("title").default("").notNull(),
   originalLanguage: text("original_language"), // Language code for original messages, null for translations
   translatedFrom: integer("translated_from"), // Reference to original message ID if this is a translation
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
-export const bubbles = pgTable("bubbles", {
-  id: serial("id").primaryKey(),
+export const bubbles = sqliteTable("bubbles", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   messageId: integer("message_id").notNull(),
   x: integer("x").default(0).notNull(),
   y: integer("y").default(0).notNull(),
@@ -32,13 +32,13 @@ export const bubbles = pgTable("bubbles", {
   title: text("title").default("").notNull(),
 });
 
-export const articles = pgTable("articles", {
-  id: serial("id").primaryKey(),
+export const articles = sqliteTable("articles", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   title: text("title").notNull(),
   content: text("content").notNull(),
-  bubbleIds: jsonb("bubble_ids").$type<number[]>().default([]).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  bubbleIds: text("bubble_ids", { mode: "json" }).$type<number[]>().default([]).notNull(),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text("updated_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
 export const insertConversationSchema = createInsertSchema(conversations).omit({
