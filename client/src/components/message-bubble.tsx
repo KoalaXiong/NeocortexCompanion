@@ -311,48 +311,96 @@ export default function MessageBubble({
 
         {/* Other Action Buttons - Right Side */}
         {!isEditingMessage && (
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
-            <button
-              onClick={handleReadOutLoud}
-              className={`p-1 rounded-full transition-all ${
-                isReading
-                  ? isUser 
-                    ? 'bg-green-500/30 text-green-200' 
-                    : 'bg-green-100 text-green-600'
-                  : isUser 
-                    ? 'bg-white/20 hover:bg-white/30 text-white' 
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-              } ${isReading ? 'animate-pulse' : ''}`}
-              title={isReading ? "Stop reading" : "Read out loud"}
-            >
-              <Volume2 className="w-3 h-3" />
-            </button>
-            {onMessageSplit && message.text.includes('\n') && (
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Mobile layout - vertical stack */}
+            <div className="md:hidden flex flex-col space-y-1">
               <button
-                onClick={() => onMessageSplit(message.id)}
-                className={`p-1 rounded-full ${
-                  isUser 
-                    ? 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-200 hover:text-blue-100' 
-                    : 'bg-blue-50 hover:bg-blue-100 text-blue-500 hover:text-blue-600'
-                }`}
-                title="Split message by line breaks"
+                onClick={handleReadOutLoud}
+                className={`p-1 rounded-full transition-all ${
+                  isReading
+                    ? isUser 
+                      ? 'bg-green-500/30 text-green-200' 
+                      : 'bg-green-100 text-green-600'
+                    : isUser 
+                      ? 'bg-white/20 hover:bg-white/30 text-white' 
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                } ${isReading ? 'animate-pulse' : ''}`}
+                title={isReading ? "Stop reading" : "Read out loud"}
               >
-                <Split className="w-3 h-3" />
+                <Volume2 className="w-3 h-3" />
               </button>
-            )}
-            {onMessageEdit && (
+              {onMessageSplit && message.text.includes('\n') && (
+                <button
+                  onClick={() => onMessageSplit(message.id)}
+                  className={`p-1 rounded-full ${
+                    isUser 
+                      ? 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-200 hover:text-blue-100' 
+                      : 'bg-blue-50 hover:bg-blue-100 text-blue-500 hover:text-blue-600'
+                  }`}
+                  title="Split message by line breaks"
+                >
+                  <Split className="w-3 h-3" />
+                </button>
+              )}
+              {onMessageEdit && (
+                <button
+                  onClick={() => setIsEditingMessage(true)}
+                  className={`p-1 rounded-full ${
+                    isUser 
+                      ? 'bg-white/20 hover:bg-white/30 text-white' 
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                  }`}
+                  title="Edit message"
+                >
+                  <Edit3 className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+            
+            {/* Desktop layout - horizontal */}
+            <div className="hidden md:flex space-x-1">
               <button
-                onClick={() => setIsEditingMessage(true)}
-                className={`p-1 rounded-full ${
-                  isUser 
-                    ? 'bg-white/20 hover:bg-white/30 text-white' 
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-                }`}
-                title="Edit message"
+                onClick={handleReadOutLoud}
+                className={`p-1 rounded-full transition-all ${
+                  isReading
+                    ? isUser 
+                      ? 'bg-green-500/30 text-green-200' 
+                      : 'bg-green-100 text-green-600'
+                    : isUser 
+                      ? 'bg-white/20 hover:bg-white/30 text-white' 
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                } ${isReading ? 'animate-pulse' : ''}`}
+                title={isReading ? "Stop reading" : "Read out loud"}
               >
-                <Edit3 className="w-3 h-3" />
+                <Volume2 className="w-3 h-3" />
               </button>
-            )}
+              {onMessageSplit && message.text.includes('\n') && (
+                <button
+                  onClick={() => onMessageSplit(message.id)}
+                  className={`p-1 rounded-full ${
+                    isUser 
+                      ? 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-200 hover:text-blue-100' 
+                      : 'bg-blue-50 hover:bg-blue-100 text-blue-500 hover:text-blue-600'
+                  }`}
+                  title="Split message by line breaks"
+                >
+                  <Split className="w-3 h-3" />
+                </button>
+              )}
+              {onMessageEdit && (
+                <button
+                  onClick={() => setIsEditingMessage(true)}
+                  className={`p-1 rounded-full ${
+                    isUser 
+                      ? 'bg-white/20 hover:bg-white/30 text-white' 
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                  }`}
+                  title="Edit message"
+                >
+                  <Edit3 className="w-3 h-3" />
+                </button>
+              )}
+            </div>
           </div>
         )}
 
