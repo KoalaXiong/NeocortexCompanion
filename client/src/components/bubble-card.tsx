@@ -326,6 +326,7 @@ export default function BubbleCard({
                 className={`inline-flex items-center justify-center w-6 h-6 rounded-full transition-all hover:scale-110 ${colorClasses.bg} ${colorClasses.text} cursor-pointer`}
                 onClick={() => setIsEditingTitle(true)}
                 onMouseDown={(e) => e.stopPropagation()}
+                style={{ marginLeft: '40px' }}
               >
                 <Plus className="w-3 h-3" />
               </button>
@@ -380,7 +381,7 @@ export default function BubbleCard({
           </div>
         </div>
         {/* Content - show full text when hovered, truncated when compact and not hovered */}
-        <div className={`flex-1 ${isHovered ? 'overflow-visible' : 'overflow-hidden'}`}>
+        <div className="flex-1" style={{ overflow: isHovered ? 'visible' : 'hidden' }}>
           {isCompact && !isHovered ? (
             <p className="text-gray-600 text-xs leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
               {bubble.message.text.length > 30 ? bubble.message.text.substring(0, 30) + '...' : bubble.message.text}
@@ -388,7 +389,9 @@ export default function BubbleCard({
           ) : isHovered ? (
             <div className="text-gray-800 font-medium text-sm leading-relaxed mb-3" style={{ 
               wordBreak: 'break-word',
-              whiteSpace: 'pre-wrap'
+              whiteSpace: 'pre-wrap',
+              maxHeight: 'none',
+              overflow: 'visible'
             }}>
               {bubble.message.text}
             </div>
