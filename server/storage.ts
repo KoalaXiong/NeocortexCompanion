@@ -246,20 +246,59 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateMessage(id: number, updates: Partial<InsertMessage>): Promise<Message> {
-    const [updated] = await db
-      .update(messages)
-      .set(updates)
-      .where(eq(messages.id, id))
-      .returning();
+    // Use transaction for consistency
+    const result = await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(messages)
+        .set(updates)
+        .where(eq(messages.id, id))
+        .returning();
+      
+      if (!updated) throw new Error('Message not found');
+      
+      // Update conversation's updatedAt timestamp
+      await tx
+        .update(conversations)
+        .set({ updatedAt: new Date().toISOString() })
+        .where(eq(conversations.id, updated.conversationId));
+      
+      return updated;
+    });
     
-    if (!updated) throw new Error('Message not found');
-    return updated;
+    return result;
+  }
+
+  // Add bulk delete operation for better performance
+  async deleteMultipleMessages(messageIds: number[]): Promise<void> {
+    if (messageIds.length === 0) return;
+    
+    await db.transaction(async (tx) => {
+      // Delete all associated bubbles
+      for (const messageId of messageIds) {
+        await tx.delete(bubbles).where(eq(bubbles.messageId, messageId));
+      }
+      
+      // Delete all messages
+      for (const messageId of messageIds) {
+        await tx.delete(messages).where(eq(messages.id, messageId));
+      }
+    });
   }
 
   async deleteMessage(id: number): Promise<void> {
-    // Delete associated bubble first
-    await db.delete(bubbles).where(eq(bubbles.messageId, id));
-    await db.delete(messages).where(eq(messages.id, id));
+    // Use transaction for atomic operations
+    await db.transaction(async (tx) => {
+      // Delete associated bubble first (foreign key constraint)
+      await tx.delete(bubbles).where(eq(bubbles.messageId, id));
+      
+      // Delete the message
+      const result = await tx.delete(messages).where(eq(messages.id, id));
+      
+      // Check if message actually existed
+      if (result.changes === 0) {
+        throw new Error('Message not found');
+      }
+    });
   }
 
   // Bubbles

@@ -110,7 +110,7 @@ export default function Chat() {
     },
   });
 
-  // Update message mutation
+  // Update message mutation with optimistic updates
   const updateMessageMutation = useMutation({
     mutationFn: async ({ id, text }: { id: number; text: string }) => {
       const response = await apiRequest("PATCH", `/api/messages/${id}`, { text });
@@ -119,8 +119,39 @@ export default function Chat() {
       }
       return response.json();
     },
+    onMutate: async ({ id, text }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
+      
+      // Snapshot previous value
+      const previousMessages = queryClient.getQueryData(["/api/conversations", conversationId, "messages"]);
+      
+      // Optimistically update cache
+      queryClient.setQueryData(
+        ["/api/conversations", conversationId, "messages"],
+        (oldData: any[]) => {
+          if (!oldData) return oldData;
+          return oldData.map(msg => 
+            msg.id === id ? { ...msg, text: text.trim() } : msg
+          );
+        }
+      );
+      
+      return { previousMessages };
+    },
+    onError: (error, variables, context) => {
+      // Rollback on error
+      if (context?.previousMessages) {
+        queryClient.setQueryData(
+          ["/api/conversations", conversationId, "messages"],
+          context.previousMessages
+        );
+      }
+      console.error('Failed to update message:', error);
+      preventAutoScroll.current = false;
+    },
     onSuccess: (updatedMessage) => {
-      // Immediately update the cache with the new message data
+      // Update with server response to ensure consistency
       queryClient.setQueryData(
         ["/api/conversations", conversationId, "messages"],
         (oldData: any[]) => {
@@ -130,16 +161,15 @@ export default function Chat() {
           );
         }
       );
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
       preventAutoScroll.current = false;
     },
-    onError: (error) => {
-      console.error('Failed to update message:', error);
-      preventAutoScroll.current = false;
+    onSettled: () => {
+      // Ensure data consistency
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
     }
   });
 
-  // Delete message mutation
+  // Delete message mutation with optimistic updates
   const deleteMessageMutation = useMutation({
     mutationFn: async (messageId: number) => {
       const response = await apiRequest("DELETE", `/api/messages/${messageId}`);
@@ -148,19 +178,39 @@ export default function Chat() {
       }
       return messageId;
     },
-    onSuccess: (deletedMessageId) => {
-      // Immediately remove the message from the cache
+    onMutate: async (messageId: number) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
+      
+      // Snapshot the previous value
+      const previousMessages = queryClient.getQueryData(["/api/conversations", conversationId, "messages"]);
+      
+      // Optimistically update cache immediately (before server response)
       queryClient.setQueryData(
         ["/api/conversations", conversationId, "messages"],
         (oldData: any[]) => {
           if (!oldData) return oldData;
-          return oldData.filter(msg => msg.id !== deletedMessageId);
+          return oldData.filter(msg => msg.id !== messageId);
         }
       );
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      
+      // Return context object with snapshot value
+      return { previousMessages };
     },
-    onError: (error) => {
+    onError: (error, messageId, context) => {
+      // If mutation fails, rollback to previous state
+      if (context?.previousMessages) {
+        queryClient.setQueryData(
+          ["/api/conversations", conversationId, "messages"],
+          context.previousMessages
+        );
+      }
       console.error('Failed to delete message:', error);
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
     }
   });
 
