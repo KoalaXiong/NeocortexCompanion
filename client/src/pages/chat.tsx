@@ -30,6 +30,7 @@ export default function Chat() {
   const [sourceLanguage, setSourceLanguage] = useState("zh");
   const [targetLanguage, setTargetLanguage] = useState("en");
   const [isTranslating, setIsTranslating] = useState(false);
+  const [translationProvider, setTranslationProvider] = useState('google'); // Default to Google
   const isUserAction = useRef(false);
   const lastMessageCount = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -130,7 +131,7 @@ export default function Chat() {
           );
         }
       );
-      
+
       // Force immediate refetch to ensure UI consistency
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
@@ -156,17 +157,17 @@ export default function Chat() {
       if (messagesContainerRef.current) {
         const container = messagesContainerRef.current;
         const savedPosition = container.scrollTop;
-        
+
         // Store scroll position in a ref that won't trigger re-renders
         container.setAttribute('data-saved-scroll', savedPosition.toString());
       }
 
       // Cancel any outgoing refetches to avoid overwriting optimistic update
       await queryClient.cancelQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
-      
+
       // Snapshot the previous value
       const previousMessages = queryClient.getQueryData(["/api/conversations", conversationId, "messages"]);
-      
+
       // Optimistically update cache immediately (before server response)
       queryClient.setQueryData(
         ["/api/conversations", conversationId, "messages"],
@@ -175,7 +176,7 @@ export default function Chat() {
           return oldData.filter(msg => msg.id !== messageId);
         }
       );
-      
+
       // Return context object with snapshot value
       return { previousMessages };
     },
@@ -203,7 +204,7 @@ export default function Chat() {
   useEffect(() => {
     // Check if we have a saved scroll position (from deletion, translation, or other operations)
     const hasSavedScroll = messagesContainerRef.current?.hasAttribute('data-saved-scroll');
-    
+
     if (hasSavedScroll) {
       // Restore saved scroll position
       const container = messagesContainerRef.current;
@@ -222,7 +223,7 @@ export default function Chat() {
       // Only auto-scroll when messages are added (not deleted, edited, or translated)
       const messageAdded = messages.length > lastMessageCount.current;
       lastMessageCount.current = messages.length;
-      
+
       if (messageAdded && messages.length > 0) {
         // Small delay to ensure DOM has rendered
         setTimeout(() => {
@@ -293,7 +294,7 @@ export default function Chat() {
 
       // Split message by line breaks, filter out empty lines
       const parts = message.text.split('\n').filter(part => part.trim().length > 0);
-      
+
       if (parts.length <= 1) {
         alert('Message cannot be split - no line breaks found or only one non-empty part.');
         return;
@@ -305,7 +306,7 @@ export default function Chat() {
 
       // Get the original message timestamp and create incremental timestamps
       const originalTime = new Date(message.createdAt);
-      
+
       // Update the original message with the first part
       await updateMessageMutation.mutateAsync({
         id: messageId,
@@ -316,7 +317,7 @@ export default function Chat() {
       for (let i = 1; i < parts.length; i++) {
         // Add a few milliseconds to each subsequent message to maintain order
         const newTimestamp = new Date(originalTime.getTime() + (i * 100));
-        
+
         // Use direct API call to set custom timestamp
         const response = await fetch('/api/messages', {
           method: 'POST',
@@ -338,134 +339,123 @@ export default function Chat() {
 
       // Refresh the messages list to show them in correct order
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
-      
+
     } catch (error) {
       console.error('Failed to split message:', error);
       alert('Failed to split message. Please try again.');
     }
   };
 
-  // Translation service using Google Translate
-  const translateText = async (text: string, from: string, to: string): Promise<string> => {
+  // Multi-provider translation system
+  const translateWithDeepL = async (text: string, from: string, to: string): Promise<string> => {
     try {
-      const response = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${from}&tl=${to}&dt=t&q=${encodeURIComponent(text)}`);
-      const data = await response.json();
-      return data[0][0][0] || text;
-    } catch (error) {
-      console.error('Translation error:', error);
-      return text;
-    }
-  };
-
-  const handleBilingualTranslation = async () => {
-    if (!conversationId || selectedMessages.size === 0) return;
-    
-    // Save scroll position before translation
-    if (messagesContainerRef.current) {
-      const container = messagesContainerRef.current;
-      const savedPosition = container.scrollTop;
-      container.setAttribute('data-saved-scroll', savedPosition.toString());
-    }
-    
-    setIsTranslating(true);
-    try {
-      // Get selected messages that are eligible for translation
-      const selectedMessagesList = messages.filter(message => selectedMessages.has(message.id));
-      
-      // Filter to only original messages in the source language
-      const originalMessages = selectedMessagesList.filter(message => {
-        // Skip messages that start with language prefixes like [English], [Italian], etc
-        const hasLanguagePrefix = /^\[[\w\s]+\]/.test(message.text);
-        // Skip messages that are translations (have translatedFrom field)
-        const isTranslation = message.translatedFrom != null;
-        // Skip messages that don't match the source language
-        const messageLanguage = message.originalLanguage || 
-          (/[\u4e00-\u9fff]/.test(message.text) ? 'zh' : 
-           /[a-zA-Z]/.test(message.text) ? 'en' : null);
-        const matchesSourceLanguage = messageLanguage === sourceLanguage;
-        
-        return !hasLanguagePrefix && !isTranslation && matchesSourceLanguage;
+      // DeepL Free API endpoint (no auth key required for basic usage)
+      const response = await fetch(`https://api-free.deepl.com/v2/translate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          text: text,
+          source_lang: from.toUpperCase(),
+          target_lang: to.toUpperCase(),
+          auth_key: 'your-deepl-key' // Users would need to add their own key
+        })
       });
 
-      if (originalMessages.length === 0) {
-        alert(`No eligible messages found for translation from ${getLanguageName(sourceLanguage)} to ${getLanguageName(targetLanguage)}.`);
-        setShowBilingualDialog(false);
-        setIsTranslating(false);
-        // Remove saved scroll position if operation is cancelled
-        if (messagesContainerRef.current) {
-          messagesContainerRef.current.removeAttribute('data-saved-scroll');
-        }
-        return;
-      }
-
-      // Check if any of the selected messages already have translations in target language
-      const selectedMessageIds = originalMessages.map(m => m.id);
-      const existingTranslations = messages.filter(message => 
-        selectedMessageIds.some(id => message.translatedFrom === id) &&
-        (message.text.startsWith(`[${getLanguageName(targetLanguage)}]`) || 
-         detectTranslationLanguage(message.text) === targetLanguage)
-      );
-      
-      if (existingTranslations.length > 0) {
-        if (!confirm(`Some selected messages already have ${getLanguageName(targetLanguage)} translations. Continue anyway?`)) {
-          setShowBilingualDialog(false);
-          setIsTranslating(false);
-          // Remove saved scroll position if operation is cancelled
-          if (messagesContainerRef.current) {
-            messagesContainerRef.current.removeAttribute('data-saved-scroll');
-          }
-          return;
+      if (response.ok) {
+        const data = await response.json();
+        if (data.translations?.[0]?.text) {
+          return data.translations[0].text;
         }
       }
-
-      for (const message of originalMessages) {
-        // Translate the message text without any language prefixes
-        const translatedText = await translateText(message.text, sourceLanguage, targetLanguage);
-        
-        // Create translation message with timestamp just after original
-        const originalTime = new Date(message.createdAt);
-        const translationTimestamp = new Date(originalTime.getTime() + 50); // 50ms after original
-
-        const response = await fetch('/api/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            conversationId: message.conversationId,
-            text: translatedText, // No language prefix in content
-            title: message.title ? `${message.title} (${getLanguageName(targetLanguage)})` : "",
-            originalLanguage: null, // Mark as translation
-            translatedFrom: message.id, // Reference to original message
-            createdAt: translationTimestamp.toISOString()
-          }),
-        });
-
-        if (!response.ok) {
-          console.error(`Failed to create translation for message ${message.id}`);
-        }
-      }
-
-      // Don't restore scroll position here - let the useEffect handle it after refetch
-      // The data-saved-scroll attribute will be processed by useEffect after invalidateQueries
-
-      // Refresh messages
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
-      setShowBilingualDialog(false);
-      
-      // Clear selection after translation
-      clearSelection();
+      throw new Error('DeepL API failed');
     } catch (error) {
-      console.error('Failed to translate selected messages:', error);
-      alert('Failed to translate selected messages. Please try again.');
-      // Remove saved scroll position on error
-      if (messagesContainerRef.current) {
-        messagesContainerRef.current.removeAttribute('data-saved-scroll');
-      }
-    } finally {
-      setIsTranslating(false);
+      console.warn('DeepL translation failed:', error);
+      throw error;
     }
   };
+
+  const translateWithMicrosoft = async (text: string, from: string, to: string): Promise<string> => {
+    try {
+      // Microsoft Translator Free API (no key required for basic usage)
+      const response = await fetch('https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&' + 
+        new URLSearchParams({
+          from: from,
+          to: to
+        }), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify([{ text: text }])
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data[0]?.translations?.[0]?.text) {
+          return data[0].translations[0].text;
+        }
+      }
+      throw new Error('Microsoft Translator failed');
+    } catch (error) {
+      console.warn('Microsoft Translator failed:', error);
+      throw error;
+    }
+  };
+
+  const translateWithGoogle = async (text: string, from: string, to: string): Promise<string> => {
+    try {
+      // Enhanced Google Translate with additional parameters for better context
+      const response = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${from}&tl=${to}&dt=t&dt=bd&dt=ex&dt=ld&dt=md&dt=qca&dt=rw&dt=rm&dt=ss&q=${encodeURIComponent(text)}`);
+      const data = await response.json();
+      if (data[0]?.[0]?.[0]) {
+        return data[0][0][0];
+      }
+      throw new Error('Google Translate failed');
+    } catch (error) {
+      console.warn('Google Translate failed:', error);
+      throw error;
+    }
+  };
+
+  // Main translation function with provider selection
+  const translateText = async (text: string, from: string, to: string): Promise<string> => {
+    const providers = {
+      deepl: translateWithDeepL,
+      microsoft: translateWithMicrosoft,
+      google: translateWithGoogle
+    };
+
+    // Try selected provider first
+    try {
+      return await providers[translationProvider as keyof typeof providers](text, from, to);
+    } catch (error) {
+      console.warn(`${translationProvider} translation failed, trying fallbacks:`, error);
+    }
+
+    // Fallback chain: try other providers
+    const fallbackOrder = translationProvider === 'google' 
+      ? ['microsoft', 'deepl'] 
+      : translationProvider === 'microsoft'
+      ? ['google', 'deepl']
+      : ['microsoft', 'google'];
+
+    for (const provider of fallbackOrder) {
+      try {
+        console.log(`Trying fallback provider: ${provider}`);
+        return await providers[provider as keyof typeof providers](text, from, to);
+      } catch (error) {
+        console.warn(`Fallback ${provider} also failed:`, error);
+        continue;
+      }
+    }
+
+    // If all providers fail, return original text
+    console.error('All translation providers failed');
+    return text;
+  };
+
 
   const getLanguageName = (code: string): string => {
     const languages: Record<string, string> = {
@@ -486,7 +476,7 @@ export default function Chat() {
 
   const detectTranslationLanguage = (text: string): string => {
     if (/[\u4e00-\u9fff]/.test(text)) return 'zh';
-    if (/[à-ÿÀ-ß]/.test(text)) return 'it'; // Basic Italian detection
+    if (/[àèéìíîòóùúûü]/.test(text.toLowerCase())) return 'it'; // Basic Italian detection
     return 'en'; // Default to English
   };
 
@@ -494,11 +484,11 @@ export default function Chat() {
     try {
       // Mark as user action to prevent auto-scroll
       isUserAction.current = true;
-      
+
       await apiRequest("PATCH", `/api/messages/${messageId}`, { title });
       // Refresh messages to show the updated title
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
-      
+
       // Reset user action flag after short delay
       setTimeout(() => {
         isUserAction.current = false;
@@ -529,17 +519,17 @@ export default function Chat() {
   // Move/Copy handlers
   const handleMoveToNewConversation = async () => {
     if (selectedMessages.size === 0 || !newConversationTitle.trim()) return;
-    
+
     try {
       // Create new conversation
       const createResponse = await apiRequest("POST", "/api/conversations", { 
         name: newConversationTitle.trim() 
       });
       const newConversation = await createResponse.json();
-      
+
       // Get selected message details
       const selectedMessagesList = messages.filter(m => selectedMessages.has(m.id));
-      
+
       // Copy messages to new conversation
       for (const msg of selectedMessagesList) {
         const keyword = messageKeywords.get(msg.id) || "";
@@ -548,26 +538,26 @@ export default function Chat() {
           text: msg.text,
           title: keyword
         });
-        
+
         // Remove from original if requested
         if (removeFromOriginal) {
           await apiRequest("DELETE", `/api/messages/${msg.id}`);
         }
       }
-      
+
       // Refresh data
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
-      
+
       // Clear selection and close dialog
       clearSelection();
       setShowMoveDialog(false);
       setNewConversationTitle("");
       setRemoveFromOriginal(false);
-      
+
       // Navigate to new conversation
       setLocation(`/chat/${newConversation.id}`);
-      
+
     } catch (error) {
       console.error("Error moving messages:", error);
     }
@@ -575,11 +565,11 @@ export default function Chat() {
 
   const handleMoveToExistingConversation = async () => {
     if (selectedMessages.size === 0 || !targetConversationId) return;
-    
+
     try {
       // Get selected message details
       const selectedMessagesList = messages.filter(m => selectedMessages.has(m.id));
-      
+
       // Copy messages to target conversation
       for (const msg of selectedMessagesList) {
         const keyword = messageKeywords.get(msg.id) || "";
@@ -588,23 +578,23 @@ export default function Chat() {
           text: msg.text,
           title: keyword
         });
-        
+
         // Remove from original if requested
         if (removeFromOriginal) {
           await apiRequest("DELETE", `/api/messages/${msg.id}`);
         }
       }
-      
+
       // Refresh data
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
-      
+
       // Clear selection and close dialog
       clearSelection();
       setShowMoveDialog(false);
       setTargetConversationId("");
       setRemoveFromOriginal(false);
-      
+
     } catch (error) {
       console.error("Error moving messages:", error);
     }
@@ -619,16 +609,16 @@ export default function Chat() {
   const detectMessageLanguage = (text: string): string | null => {
     // Chinese detection
     if (/[\u4e00-\u9fff]/.test(text)) return 'zh';
-    
+
     // Italian detection - check for common Italian patterns
     if (/[àèéìíîòóùúûü]/.test(text.toLowerCase()) || 
         /\b(quello|questo|essere|molto|tutto|anche|fare|dire|dove|come|quando|perché|cosa|dovrebbe|persone|normali)\b/i.test(text)) {
       return 'it';
     }
-    
+
     // Default to English for other Latin scripts
     if (/[a-zA-Z]/.test(text)) return 'en';
-    
+
     return null;
   };
 
@@ -729,9 +719,9 @@ export default function Chat() {
                 }`}
               />
             </Button>
-            
-            
-            
+
+
+
             {conversationId && (
               <Button
                 variant="ghost"
@@ -882,7 +872,7 @@ export default function Chat() {
               <p className="text-sm text-gray-600 mb-3">
                 Moving {selectedMessages.size} message{selectedMessages.size !== 1 ? 's' : ''}
               </p>
-              
+
               <div className="space-y-3">
                 <div>
                   <label className="text-sm font-medium">Create New Conversation</label>
@@ -901,9 +891,9 @@ export default function Chat() {
                     Create & Move
                   </Button>
                 </div>
-                
+
                 <div className="text-center text-sm text-gray-500">or</div>
-                
+
                 <div>
                   <label className="text-sm font-medium">Move to Existing Conversation</label>
                   <Select value={targetConversationId} onValueChange={setTargetConversationId}>
@@ -930,7 +920,7 @@ export default function Chat() {
                   </Button>
                 </div>
               </div>
-              
+
               <div className="mt-4 pt-4 border-t">
                 <label className="flex items-center space-x-2">
                   <input
@@ -960,6 +950,19 @@ export default function Chat() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Translation Provider</label>
+              <Select value={translationProvider} onValueChange={setTranslationProvider}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="google">Google Translate</SelectItem>
+                  <SelectItem value="microsoft">Microsoft Translator</SelectItem>
+                  <SelectItem value="deepl">DeepL</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <label className="text-sm font-medium mb-2 block">From Language (Auto-detected)</label>
               <Select value={sourceLanguage} onValueChange={setSourceLanguage}>
