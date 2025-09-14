@@ -1,4 +1,5 @@
 import { Switch, Route, useLocation } from "wouter";
+import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -10,6 +11,17 @@ import Chat from "@/pages/chat";
 import Bubbles from "@/pages/bubbles";
 import Article from "@/pages/article";
 import NotFound from "@/pages/not-found";
+
+// Redirect component using wouter's navigation
+function RedirectToConversations() {
+  const [, navigate] = useLocation();
+  
+  useEffect(() => {
+    navigate('/conversations', { replace: true });
+  }, [navigate]);
+  
+  return null;
+}
 
 function Router() {
   const [location] = useLocation();
@@ -24,6 +36,8 @@ function Router() {
           <Route path="/conversations" component={Conversations} />
           <Route path="/chat/:id?" component={Chat} />
           <Route path="/bubbles/:conversationId" component={Bubbles} />
+          <Route path="/bubbles" component={RedirectToConversations} />
+          <Route path="/article" component={RedirectToConversations} />
           <Route path="/article/:conversationId?" component={Article} />
           <Route component={NotFound} />
         </Switch>

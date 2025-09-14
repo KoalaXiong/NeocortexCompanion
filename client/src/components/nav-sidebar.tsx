@@ -14,7 +14,7 @@ export default function NavSidebar() {
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Conversations', href: '/conversations', icon: MessageSquare },
     { name: 'Bubbles', href: '/bubbles', icon: Zap },
-    { name: 'Articles', href: '/articles', icon: FileText },
+    { name: 'Articles', href: '/article', icon: FileText },
   ];
 
   const isActive = (href: string) => {
