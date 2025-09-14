@@ -499,6 +499,54 @@ export default function Chat() {
     }
   };
 
+  const handleBilingualTranslation = async () => {
+    if (selectedMessages.size === 0 || sourceLanguage === targetLanguage) {
+      return;
+    }
+
+    setIsTranslating(true);
+    
+    try {
+      // Get selected messages and sort by creation order
+      const selectedMessagesList = messages
+        .filter(m => selectedMessages.has(m.id))
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+      // Translate each message and add it right after the original
+      for (const message of selectedMessagesList) {
+        try {
+          const translatedText = await translateText(message.text, sourceLanguage, targetLanguage);
+          
+          // Create translated message with metadata
+          await apiRequest("POST", "/api/messages", {
+            conversationId: conversationId,
+            text: translatedText,
+            title: `[${getLanguageName(targetLanguage)} translation]`,
+            originalLanguage: targetLanguage,
+            translatedFrom: message.id
+          });
+        } catch (error) {
+          console.error(`Failed to translate message ${message.id}:`, error);
+        }
+      }
+
+      // Refresh messages to show translations
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/conversations", conversationId, "messages"] 
+      });
+
+      // Reset state
+      setShowBilingualDialog(false);
+      setSelectedMessages(new Set());
+      setMessageKeywords(new Map());
+      setIsSelectionMode(false);
+    } catch (error) {
+      console.error("Translation process failed:", error);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   const toggleSelectionMode = () => {
     setIsSelectionMode(!isSelectionMode);
     if (isSelectionMode) {
