@@ -101,18 +101,26 @@ export default function BubbleCard({
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
+    console.log('🎯 BubbleCard double-click detected:', bubble.id, 'ConnectMode:', isConnectMode);
     if (isConnectMode && onBubbleDoubleClick) {
+      console.log('✅ Calling onBubbleDoubleClick for:', bubble.id);
       e.preventDefault();
       e.stopPropagation();
       onBubbleDoubleClick(bubble.id);
+    } else {
+      console.log('❌ Double-click ignored - ConnectMode:', isConnectMode, 'Handler:', !!onBubbleDoubleClick);
     }
   };
 
   const handleRightClick = (e: React.MouseEvent) => {
+    console.log('🖱️ BubbleCard right-click detected:', bubble.id, 'ConnectMode:', isConnectMode);
     if (isConnectMode && onBubbleClick) {
+      console.log('✅ Calling onBubbleClick for:', bubble.id);
       e.preventDefault();
       e.stopPropagation();
       onBubbleClick(bubble.id);
+    } else {
+      console.log('❌ Right-click ignored - ConnectMode:', isConnectMode, 'Handler:', !!onBubbleClick);
     }
   };
 
