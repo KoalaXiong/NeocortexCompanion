@@ -50,19 +50,18 @@ export default function NavSidebar() {
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-2">
             {navigation.map((item) => (
-              <Link key={item.name} href={item.href}>
-                <Button
-                  variant={isActive(item.href) ? "secondary" : "ghost"}
-                  className={`w-full justify-start ${
-                    isActive(item.href) 
-                      ? 'bg-gradient-to-r from-purple-100 to-blue-100 text-primary' 
-                      : 'text-gray-700 hover:text-primary hover:bg-gray-50'
-                  }`}
-                  onClick={() => setIsOpen(false)}
-                >
-                  <item.icon className="mr-3 h-4 w-4" />
-                  {item.name}
-                </Button>
+              <Link 
+                key={item.name} 
+                href={item.href}
+                className={`flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  isActive(item.href) 
+                    ? 'bg-gradient-to-r from-purple-100 to-blue-100 text-primary' 
+                    : 'text-gray-700 hover:text-primary hover:bg-gray-50'
+                }`}
+                onClick={() => setIsOpen(false)}
+              >
+                <item.icon className="mr-3 h-4 w-4" />
+                {item.name}
               </Link>
             ))}
           </nav>
