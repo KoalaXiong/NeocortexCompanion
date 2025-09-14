@@ -346,65 +346,8 @@ export default function Chat() {
     }
   };
 
-  // Multi-provider translation system
-  const translateWithDeepL = async (text: string, from: string, to: string): Promise<string> => {
-    try {
-      // DeepL Free API endpoint (no auth key required for basic usage)
-      const response = await fetch(`https://api-free.deepl.com/v2/translate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          text: text,
-          source_lang: from.toUpperCase(),
-          target_lang: to.toUpperCase(),
-          auth_key: 'your-deepl-key' // Users would need to add their own key
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.translations?.[0]?.text) {
-          return data.translations[0].text;
-        }
-      }
-      throw new Error('DeepL API failed');
-    } catch (error) {
-      console.warn('DeepL translation failed:', error);
-      throw error;
-    }
-  };
-
-  const translateWithMicrosoft = async (text: string, from: string, to: string): Promise<string> => {
-    try {
-      // Microsoft Translator Free API (no key required for basic usage)
-      const response = await fetch('https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&' + 
-        new URLSearchParams({
-          from: from,
-          to: to
-        }), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify([{ text: text }])
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data[0]?.translations?.[0]?.text) {
-          return data[0].translations[0].text;
-        }
-      }
-      throw new Error('Microsoft Translator failed');
-    } catch (error) {
-      console.warn('Microsoft Translator failed:', error);
-      throw error;
-    }
-  };
-
-  const translateWithGoogle = async (text: string, from: string, to: string): Promise<string> => {
+  // Translation service using Google Translate with enhanced parameters
+  const translateText = async (text: string, from: string, to: string): Promise<string> => {
     try {
       // Enhanced Google Translate with additional parameters for better context
       const response = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${from}&tl=${to}&dt=t&dt=bd&dt=ex&dt=ld&dt=md&dt=qca&dt=rw&dt=rm&dt=ss&q=${encodeURIComponent(text)}`);
@@ -415,45 +358,8 @@ export default function Chat() {
       throw new Error('Google Translate failed');
     } catch (error) {
       console.warn('Google Translate failed:', error);
-      throw error;
+      return text; // Return original text if translation fails
     }
-  };
-
-  // Main translation function with provider selection
-  const translateText = async (text: string, from: string, to: string): Promise<string> => {
-    const providers = {
-      deepl: translateWithDeepL,
-      microsoft: translateWithMicrosoft,
-      google: translateWithGoogle
-    };
-
-    // Try selected provider first
-    try {
-      return await providers[translationProvider as keyof typeof providers](text, from, to);
-    } catch (error) {
-      console.warn(`${translationProvider} translation failed, trying fallbacks:`, error);
-    }
-
-    // Fallback chain: try other providers
-    const fallbackOrder = translationProvider === 'google' 
-      ? ['microsoft', 'deepl'] 
-      : translationProvider === 'microsoft'
-      ? ['google', 'deepl']
-      : ['microsoft', 'google'];
-
-    for (const provider of fallbackOrder) {
-      try {
-        console.log(`Trying fallback provider: ${provider}`);
-        return await providers[provider as keyof typeof providers](text, from, to);
-      } catch (error) {
-        console.warn(`Fallback ${provider} also failed:`, error);
-        continue;
-      }
-    }
-
-    // If all providers fail, return original text
-    console.error('All translation providers failed');
-    return text;
   };
 
 
@@ -502,6 +408,13 @@ export default function Chat() {
   const handleBilingualTranslation = async () => {
     if (selectedMessages.size === 0 || sourceLanguage === targetLanguage) {
       return;
+    }
+
+    // Save current scroll position before translation
+    if (messagesContainerRef.current) {
+      const container = messagesContainerRef.current;
+      const savedPosition = container.scrollTop;
+      container.setAttribute('data-saved-scroll', savedPosition.toString());
     }
 
     setIsTranslating(true);
@@ -998,19 +911,7 @@ export default function Chat() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Translation Provider</label>
-              <Select value={translationProvider} onValueChange={setTranslationProvider}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="google">Google Translate</SelectItem>
-                  <SelectItem value="microsoft">Microsoft Translator</SelectItem>
-                  <SelectItem value="deepl">DeepL</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            
             <div>
               <label className="text-sm font-medium mb-2 block">From Language (Auto-detected)</label>
               <Select value={sourceLanguage} onValueChange={setSourceLanguage}>
