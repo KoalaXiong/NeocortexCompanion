@@ -217,12 +217,30 @@ export default function Chat() {
     },
     onSuccess: () => {
       // Keep scroll position preserved after successful deletion
-      // preventAutoScroll.current remains true to maintain position
+      // Ensure scroll position is maintained after server response
+      if (messagesContainerRef.current) {
+        const container = messagesContainerRef.current;
+        setTimeout(() => {
+          if (preventAutoScroll.current) {
+            container.scrollTop = savedScrollPosition.current;
+          }
+        }, 10);
+      }
     },
     onSettled: () => {
       // Always refetch after error or success to ensure consistency
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      
+      // Final scroll position check after refetch
+      if (preventAutoScroll.current && messagesContainerRef.current) {
+        setTimeout(() => {
+          if (messagesContainerRef.current && preventAutoScroll.current) {
+            messagesContainerRef.current.scrollTop = savedScrollPosition.current;
+            preventAutoScroll.current = false;
+          }
+        }, 100);
+      }
     }
   });
 
@@ -230,19 +248,26 @@ export default function Chat() {
     if (preventAutoScroll.current && messagesContainerRef.current) {
       // Restore saved scroll position without animation
       const container = messagesContainerRef.current;
-      // Use requestAnimationFrame to ensure DOM has updated
+      // Use multiple frames to ensure DOM has fully updated
       requestAnimationFrame(() => {
-        container.scrollTop = savedScrollPosition.current;
-        // Reset the flag after scroll position is restored
-        preventAutoScroll.current = false;
+        requestAnimationFrame(() => {
+          if (container && preventAutoScroll.current) {
+            container.scrollTop = savedScrollPosition.current;
+            // Reset the flag after scroll position is restored
+            preventAutoScroll.current = false;
+          }
+        });
       });
     } else if (!preventAutoScroll.current && messages.length > 0) {
-      // Auto-scroll to bottom for new messages only
-      setTimeout(() => {
-        if (!preventAutoScroll.current) {
-          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-        }
-      }, 50);
+      // Only auto-scroll to bottom for new messages, not after deletions or edits
+      const shouldAutoScroll = !preventAutoScroll.current;
+      if (shouldAutoScroll) {
+        setTimeout(() => {
+          if (!preventAutoScroll.current && messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+          }
+        }, 50);
+      }
     }
   }, [messages]);
 
