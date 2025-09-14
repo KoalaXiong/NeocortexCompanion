@@ -226,18 +226,20 @@ export class DatabaseStorage implements IStorage {
     };
 
     // Use transaction for atomic operations
-    const result = await db.transaction(async (tx) => {
+    const result = db.transaction((tx) => {
       // Insert message
-      const [newMessage] = await tx
+      const newMessage = tx
         .insert(messages)
         .values(messageData)
-        .returning();
+        .returning()
+        .get();
 
       // Update conversation's updatedAt in same transaction
-      await tx
+      tx
         .update(conversations)
         .set({ updatedAt: createdAt })
-        .where(eq(conversations.id, message.conversationId));
+        .where(eq(conversations.id, message.conversationId))
+        .run();
 
       return newMessage;
     });
@@ -247,20 +249,22 @@ export class DatabaseStorage implements IStorage {
 
   async updateMessage(id: number, updates: Partial<InsertMessage>): Promise<Message> {
     // Use transaction for consistency
-    const result = await db.transaction(async (tx) => {
-      const [updated] = await tx
+    const result = db.transaction((tx) => {
+      const updated = tx
         .update(messages)
         .set(updates)
         .where(eq(messages.id, id))
-        .returning();
+        .returning()
+        .get();
 
       if (!updated) throw new Error('Message not found');
 
       // Update conversation's updatedAt timestamp
-      await tx
+      tx
         .update(conversations)
         .set({ updatedAt: new Date().toISOString() })
-        .where(eq(conversations.id, updated.conversationId));
+        .where(eq(conversations.id, updated.conversationId))
+        .run();
 
       return updated;
     });
@@ -272,15 +276,15 @@ export class DatabaseStorage implements IStorage {
   async deleteMultipleMessages(messageIds: number[]): Promise<void> {
     if (messageIds.length === 0) return;
 
-    await db.transaction(async (tx) => {
+    db.transaction((tx) => {
       // Delete all associated bubbles
       for (const messageId of messageIds) {
-        await tx.delete(bubbles).where(eq(bubbles.messageId, messageId));
+        tx.delete(bubbles).where(eq(bubbles.messageId, messageId)).run();
       }
 
       // Delete all messages
       for (const messageId of messageIds) {
-        await tx.delete(messages).where(eq(messages.id, messageId));
+        tx.delete(messages).where(eq(messages.id, messageId)).run();
       }
     });
   }
@@ -288,15 +292,15 @@ export class DatabaseStorage implements IStorage {
   async deleteMessage(id: number): Promise<void> {
     try {
       // Use transaction for atomic deletion
-      await db.transaction(async (tx) => {
+      db.transaction((tx) => {
         // First delete any associated bubbles
-        await tx.delete(bubbles).where(eq(bubbles.messageId, id));
+        tx.delete(bubbles).where(eq(bubbles.messageId, id)).run();
         
         // Delete any translations that reference this message
-        await tx.delete(messages).where(eq(messages.translatedFrom, id));
+        tx.delete(messages).where(eq(messages.translatedFrom, id)).run();
 
         // Then delete the message itself
-        const result = await tx.delete(messages).where(eq(messages.id, id));
+        const result = tx.delete(messages).where(eq(messages.id, id)).run();
         
         console.log(`Deleted message ${id}, affected rows:`, result);
       });

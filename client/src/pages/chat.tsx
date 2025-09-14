@@ -190,20 +190,8 @@ export default function Chat() {
       console.error('Failed to delete message:', error);
     },
     onSuccess: () => {
-      // Restore scroll position after successful deletion
-      if (messagesContainerRef.current) {
-        const container = messagesContainerRef.current;
-        const savedPosition = container.getAttribute('data-saved-scroll');
-        if (savedPosition) {
-          // Use requestAnimationFrame to ensure DOM has updated
-          requestAnimationFrame(() => {
-            if (container) {
-              container.scrollTop = parseInt(savedPosition);
-              container.removeAttribute('data-saved-scroll');
-            }
-          });
-        }
-      }
+      // Don't restore scroll position here - let the useEffect handle it after refetch
+      // The data-saved-scroll attribute will be processed by useEffect after invalidateQueries
     },
     onSettled: () => {
       // Always refetch after error or success to ensure consistency
@@ -458,20 +446,8 @@ export default function Chat() {
         }
       }
 
-      // Restore scroll position after translations are created
-      if (messagesContainerRef.current) {
-        const container = messagesContainerRef.current;
-        const savedPosition = container.getAttribute('data-saved-scroll');
-        if (savedPosition) {
-          // Use requestAnimationFrame to ensure DOM updates before restoring scroll
-          requestAnimationFrame(() => {
-            if (container) {
-              container.scrollTop = parseInt(savedPosition);
-              container.removeAttribute('data-saved-scroll');
-            }
-          });
-        }
-      }
+      // Don't restore scroll position here - let the useEffect handle it after refetch
+      // The data-saved-scroll attribute will be processed by useEffect after invalidateQueries
 
       // Refresh messages
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
