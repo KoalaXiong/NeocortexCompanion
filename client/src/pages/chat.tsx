@@ -348,25 +348,77 @@ export default function Chat() {
 
   // Multi-provider translation system
   const translateWithDeepL = async (text: string, from: string, to: string): Promise<string> => {
-    // DeepL requires API keys, so we'll fall back to Google Translate
-    // but maintain the DeepL option for user preference
     try {
-      console.log('Using Google Translate backend for DeepL translation');
-      return await translateWithGoogle(text, from, to);
+      // Check if DeepL API key is available
+      const apiKey = import.meta.env.VITE_DEEPL_API_KEY || '';
+      
+      if (!apiKey) {
+        throw new Error('DeepL API key required. Please configure DEEPL_API_KEY to use DeepL translation.');
+      }
+
+      // Use DeepL Free API endpoint with authentic API key
+      const response = await fetch('https://api-free.deepl.com/v2/translate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `DeepL-Auth-Key ${apiKey}`
+        },
+        body: new URLSearchParams({
+          text: text,
+          source_lang: from.toUpperCase(),
+          target_lang: to.toUpperCase()
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.translations?.[0]?.text) {
+          return data.translations[0].text;
+        }
+      }
+      
+      const errorData = await response.text();
+      throw new Error(`DeepL API failed: ${response.status} - ${errorData}`);
     } catch (error) {
-      console.warn('DeepL (via Google) translation failed:', error);
+      console.warn('DeepL translation failed:', error);
       throw error;
     }
   };
 
   const translateWithMicrosoft = async (text: string, from: string, to: string): Promise<string> => {
-    // Microsoft/Bing Translator APIs have CORS restrictions that prevent browser usage
-    // Use Google Translate as the backend but maintain Microsoft as user choice
     try {
-      console.log('Microsoft Translator: Using Google Translate backend (Bing API blocked by CORS)');
-      return await translateWithGoogle(text, from, to);
+      // Check if Microsoft Translator API key is available
+      const apiKey = import.meta.env.VITE_MICROSOFT_TRANSLATOR_KEY || import.meta.env.VITE_AZURE_TRANSLATOR_KEY || '';
+      
+      if (!apiKey) {
+        throw new Error('Microsoft Translator API key required. Please configure MICROSOFT_TRANSLATOR_KEY to use Microsoft translation.');
+      }
+
+      // Use Microsoft Translator API with authentic API key
+      const response = await fetch('https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&' + 
+        new URLSearchParams({
+          from: from,
+          to: to
+        }), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Ocp-Apim-Subscription-Key': apiKey
+        },
+        body: JSON.stringify([{ text: text }])
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data[0]?.translations?.[0]?.text) {
+          return data[0].translations[0].text;
+        }
+      }
+      
+      const errorData = await response.text();
+      throw new Error(`Microsoft Translator API failed: ${response.status} - ${errorData}`);
     } catch (error) {
-      console.warn('Microsoft Translator (via Google) failed:', error);
+      console.warn('Microsoft Translator failed:', error);
       throw error;
     }
   };
