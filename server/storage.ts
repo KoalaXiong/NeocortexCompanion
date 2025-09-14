@@ -1,15 +1,15 @@
-import { 
-  conversations, 
-  messages, 
-  bubbles, 
+import {
+  conversations,
+  messages,
+  bubbles,
   articles,
-  type Conversation, 
-  type Message, 
-  type Bubble, 
+  type Conversation,
+  type Message,
+  type Bubble,
   type Article,
-  type InsertConversation, 
-  type InsertMessage, 
-  type InsertBubble, 
+  type InsertConversation,
+  type InsertMessage,
+  type InsertBubble,
   type InsertArticle,
   type ConversationWithStats,
   type MessageWithBubble,
@@ -102,7 +102,7 @@ export class DatabaseStorage implements IStorage {
     const conversationStats: ConversationWithStats[] = Array.from(conversationMap.values()).map(({ conversation, messages }) => {
       const messageCount = messages.length;
       const wordCount = messages.reduce((total, msg) => total + msg.text.split(' ').length, 0);
-      const lastMessage = messages.length > 0 
+      const lastMessage = messages.length > 0
         ? messages[messages.length - 1].text.substring(0, 100) + (messages[messages.length - 1].text.length > 100 ? '...' : '')
         : undefined;
 
@@ -295,13 +295,13 @@ export class DatabaseStorage implements IStorage {
       db.transaction((tx) => {
         // First delete any associated bubbles
         tx.delete(bubbles).where(eq(bubbles.messageId, id)).run();
-        
+
         // Delete any translations that reference this message
         tx.delete(messages).where(eq(messages.translatedFrom, id)).run();
 
         // Then delete the message itself
         const result = tx.delete(messages).where(eq(messages.id, id)).run();
-        
+
         console.log(`Deleted message ${id}, affected rows:`, result);
       });
     } catch (error) {

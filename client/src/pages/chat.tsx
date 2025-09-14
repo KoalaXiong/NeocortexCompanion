@@ -425,25 +425,50 @@ export default function Chat() {
         .filter(m => selectedMessages.has(m.id))
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-      // Translate each message and add it right after the original
+      // Process each message individually to maintain positioning
       for (const message of selectedMessagesList) {
         try {
           const translatedText = await translateText(message.text, sourceLanguage, targetLanguage);
           
-          // Create translated message with metadata
-          await apiRequest("POST", "/api/messages", {
-            conversationId: conversationId,
-            text: translatedText,
-            title: `[${getLanguageName(targetLanguage)} translation]`,
-            originalLanguage: targetLanguage,
-            translatedFrom: message.id
+          // Calculate timestamp to place translated message right after the original
+          // Add small increment (1 second) to ensure it appears after the original
+          const originalTime = new Date(message.createdAt);
+          const translatedTimestamp = new Date(originalTime.getTime() + 1000);
+          
+          // Create translated message with precise timestamp positioning
+          const response = await fetch('/api/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              conversationId: conversationId,
+              text: translatedText,
+              title: `[${getLanguageName(targetLanguage)} translation]`,
+              originalLanguage: targetLanguage,
+              translatedFrom: message.id,
+              createdAt: translatedTimestamp.toISOString()
+            }),
           });
+
+          if (!response.ok) {
+            throw new Error(`Failed to create translation for message ${message.id}`);
+          }
+
+          // Immediately refresh after each translation to maintain order
+          queryClient.invalidateQueries({ 
+            queryKey: ["/api/conversations", conversationId, "messages"] 
+          });
+
+          // Small delay to ensure proper ordering in database
+          await new Promise(resolve => setTimeout(resolve, 100));
+
         } catch (error) {
           console.error(`Failed to translate message ${message.id}:`, error);
         }
       }
 
-      // Refresh messages to show translations
+      // Final refresh to ensure all translations are displayed
       queryClient.invalidateQueries({ 
         queryKey: ["/api/conversations", conversationId, "messages"] 
       });
