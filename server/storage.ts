@@ -16,7 +16,7 @@ import {
   type BubbleWithMessage
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Conversations
@@ -52,29 +52,67 @@ export class DatabaseStorage implements IStorage {
 
   // Conversations
   async getConversations(): Promise<ConversationWithStats[]> {
-    const conversationList = await db.select().from(conversations);
-    
-    const conversationStats = await Promise.all(
-      conversationList.map(async (conv) => {
-        const conversationMessages = await db
-          .select()
-          .from(messages)
-          .where(eq(messages.conversationId, conv.id));
-        
-        const messageCount = conversationMessages.length;
-        const wordCount = conversationMessages.reduce((total, msg) => total + msg.text.split(' ').length, 0);
-        const lastMessage = conversationMessages.length > 0 
-          ? conversationMessages[conversationMessages.length - 1].text.substring(0, 100) + '...'
-          : undefined;
-
-        return {
-          ...conv,
-          messageCount,
-          wordCount,
-          lastMessage
-        };
+    // Single query to get all conversations with their message data
+    const conversationsWithMessages = await db
+      .select({
+        id: conversations.id,
+        name: conversations.name,
+        createdAt: conversations.createdAt,
+        updatedAt: conversations.updatedAt,
+        messageId: messages.id,
+        messageText: messages.text,
+        messageCreatedAt: messages.createdAt,
       })
-    );
+      .from(conversations)
+      .leftJoin(messages, eq(conversations.id, messages.conversationId))
+      .orderBy(conversations.updatedAt, messages.createdAt);
+
+    // Group messages by conversation efficiently
+    const conversationMap = new Map<number, {
+      conversation: Conversation;
+      messages: { id: number; text: string; createdAt: string }[];
+    }>();
+
+    for (const row of conversationsWithMessages) {
+      const convId = row.id;
+      
+      if (!conversationMap.has(convId)) {
+        conversationMap.set(convId, {
+          conversation: {
+            id: row.id,
+            name: row.name,
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt,
+          },
+          messages: []
+        });
+      }
+
+      // Add message if it exists (leftJoin may return null)
+      if (row.messageId) {
+        conversationMap.get(convId)!.messages.push({
+          id: row.messageId,
+          text: row.messageText,
+          createdAt: row.messageCreatedAt,
+        });
+      }
+    }
+
+    // Calculate stats efficiently
+    const conversationStats: ConversationWithStats[] = Array.from(conversationMap.values()).map(({ conversation, messages }) => {
+      const messageCount = messages.length;
+      const wordCount = messages.reduce((total, msg) => total + msg.text.split(' ').length, 0);
+      const lastMessage = messages.length > 0 
+        ? messages[messages.length - 1].text.substring(0, 100) + (messages[messages.length - 1].text.length > 100 ? '...' : '')
+        : undefined;
+
+      return {
+        ...conversation,
+        messageCount,
+        wordCount,
+        lastMessage
+      };
+    });
 
     return conversationStats.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }
@@ -126,23 +164,53 @@ export class DatabaseStorage implements IStorage {
 
   // Messages
   async getMessagesByConversation(conversationId: number): Promise<MessageWithBubble[]> {
-    const conversationMessages = await db
-      .select()
+    // Single query with LEFT JOIN to get messages and their bubbles
+    const messagesWithBubbles = await db
+      .select({
+        // Message fields
+        id: messages.id,
+        conversationId: messages.conversationId,
+        text: messages.text,
+        title: messages.title,
+        originalLanguage: messages.originalLanguage,
+        translatedFrom: messages.translatedFrom,
+        createdAt: messages.createdAt,
+        // Bubble fields (nullable)
+        bubbleId: bubbles.id,
+        bubbleX: bubbles.x,
+        bubbleY: bubbles.y,
+        bubbleWidth: bubbles.width,
+        bubbleHeight: bubbles.height,
+        bubbleCategory: bubbles.category,
+        bubbleColor: bubbles.color,
+        bubbleTitle: bubbles.title,
+      })
       .from(messages)
+      .leftJoin(bubbles, eq(messages.id, bubbles.messageId))
       .where(eq(messages.conversationId, conversationId))
       .orderBy(messages.createdAt);
 
-    const messagesWithBubbles = await Promise.all(
-      conversationMessages.map(async (message) => {
-        const [bubble] = await db
-          .select()
-          .from(bubbles)
-          .where(eq(bubbles.messageId, message.id));
-        return { ...message, bubble: bubble || undefined };
-      })
-    );
-
-    return messagesWithBubbles;
+    // Transform the flat result into the expected structure
+    return messagesWithBubbles.map(row => ({
+      id: row.id,
+      conversationId: row.conversationId,
+      text: row.text,
+      title: row.title,
+      originalLanguage: row.originalLanguage,
+      translatedFrom: row.translatedFrom,
+      createdAt: row.createdAt,
+      bubble: row.bubbleId ? {
+        id: row.bubbleId,
+        messageId: row.id,
+        x: row.bubbleX!,
+        y: row.bubbleY!,
+        width: row.bubbleWidth!,
+        height: row.bubbleHeight!,
+        category: row.bubbleCategory!,
+        color: row.bubbleColor!,
+        title: row.bubbleTitle!,
+      } : undefined
+    }));
   }
 
   async getMessage(id: number): Promise<Message | undefined> {
@@ -156,22 +224,25 @@ export class DatabaseStorage implements IStorage {
       ...message,
       createdAt,
     };
-    console.log("Creating message with data:", messageData);
     
-    const [newMessage] = await db
-      .insert(messages)
-      .values(messageData)
-      .returning();
-    
-    console.log("Created message:", newMessage);
+    // Use transaction for atomic operations
+    const result = await db.transaction(async (tx) => {
+      // Insert message
+      const [newMessage] = await tx
+        .insert(messages)
+        .values(messageData)
+        .returning();
+      
+      // Update conversation's updatedAt in same transaction
+      await tx
+        .update(conversations)
+        .set({ updatedAt: createdAt })
+        .where(eq(conversations.id, message.conversationId));
 
-    // Update conversation's updatedAt
-    await db
-      .update(conversations)
-      .set({ updatedAt: new Date().toISOString() })
-      .where(eq(conversations.id, message.conversationId));
+      return newMessage;
+    });
 
-    return newMessage;
+    return result;
   }
 
   async updateMessage(id: number, updates: Partial<InsertMessage>): Promise<Message> {

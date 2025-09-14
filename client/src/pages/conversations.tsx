@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -369,21 +369,27 @@ export default function Conversations() {
     }
   };
 
-  const filteredConversations = conversations
-    .filter(conv => 
-      conv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      conv.lastMessage?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "recent":
-          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-        case "active":
-          return b.messageCount - a.messageCount;
-        default:
-          return 0;
-      }
-    });
+  const filteredConversations = useMemo(() => {
+    if (!conversations) return [];
+    
+    return conversations
+      .filter(conv => {
+        if (!searchQuery) return true;
+        const query = searchQuery.toLowerCase();
+        return conv.name.toLowerCase().includes(query) ||
+               conv.lastMessage?.toLowerCase().includes(query);
+      })
+      .sort((a, b) => {
+        switch (sortBy) {
+          case "recent":
+            return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+          case "active":
+            return b.messageCount - a.messageCount;
+          default:
+            return 0;
+        }
+      });
+  }, [conversations, searchQuery, sortBy]);
 
   if (isLoading) {
     return (
