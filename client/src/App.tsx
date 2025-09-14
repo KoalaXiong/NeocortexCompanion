@@ -9,8 +9,9 @@ import Landing from "@/pages/landing";
 import Conversations from "@/pages/conversations";
 import Chat from "@/pages/chat";
 import Bubbles from "@/pages/bubbles";
-import Article from "@/pages/article";
-import NotFound from "@/pages/not-found";
+import ArticlePage from "./pages/article";
+import ColorSchemaPage from "./pages/color-schema";
+import NotFoundPage from "./pages/not-found";
 import type { ConversationWithStats } from "@shared/schema";
 
 // Bubbles listing component - shows all conversations with bubbles
@@ -25,10 +26,10 @@ function BubblesListing() {
       <div className="max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">Bubbles</h1>
         <p className="text-gray-600 mb-6">Select a conversation to view its thought bubbles</p>
-        
+
         <div className="grid gap-4">
           {conversations.map((conversation) => (
-            <div 
+            <div
               key={conversation.id}
               className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
               onClick={() => navigate(`/bubbles/${conversation.id}`)}
@@ -40,11 +41,11 @@ function BubblesListing() {
             </div>
           ))}
         </div>
-        
+
         {conversations.length === 0 && (
           <div className="text-center py-12">
             <p className="text-gray-500">No conversations found.</p>
-            <button 
+            <button
               onClick={() => navigate('/conversations')}
               className="mt-4 text-primary hover:underline"
             >
@@ -69,10 +70,10 @@ function ArticlesListing() {
       <div className="max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">Articles</h1>
         <p className="text-gray-600 mb-6">Select a conversation to create or view articles from its thought bubbles</p>
-        
+
         <div className="grid gap-4">
           {conversations.map((conversation) => (
-            <div 
+            <div
               key={conversation.id}
               className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
               onClick={() => navigate(`/article/${conversation.id}`)}
@@ -84,11 +85,11 @@ function ArticlesListing() {
             </div>
           ))}
         </div>
-        
+
         {conversations.length === 0 && (
           <div className="text-center py-12">
             <p className="text-gray-500">No conversations found.</p>
-            <button 
+            <button
               onClick={() => navigate('/conversations')}
               className="mt-4 text-primary hover:underline"
             >
@@ -116,9 +117,9 @@ function Router() {
           <Route path="/chat/:id?" component={Chat} />
           <Route path="/bubbles/:conversationId" component={Bubbles} />
           <Route path="/bubbles" component={BubblesListing} />
-          <Route path="/article" component={ArticlesListing} />
-          <Route path="/article/:conversationId?" component={Article} />
-          <Route component={NotFound} />
+          <Route path="/article" element={<ArticlePage />} />
+          <Route path="/colors" element={<ColorSchemaPage />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Switch>
       </div>
     </div>
