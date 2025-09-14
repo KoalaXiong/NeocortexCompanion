@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -82,6 +82,13 @@ export default function MessageBubble({
   const [messageValue, setMessageValue] = useState(cleanText);
   const [isReading, setIsReading] = useState(false);
 
+  // Update messageValue when message.text changes
+  useEffect(() => {
+    if (!isEditingMessage) {
+      setMessageValue(cleanText);
+    }
+  }, [message.text, cleanText, isEditingMessage]);
+
   const formatTime = (date: Date | string) => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
@@ -101,8 +108,9 @@ export default function MessageBubble({
   };
 
   const handleMessageSubmit = () => {
-    if (messageValue.trim() !== message.text) {
-      onMessageEdit?.(message.id, messageValue.trim());
+    const trimmedValue = messageValue.trim();
+    if (trimmedValue !== message.text) {
+      onMessageEdit?.(message.id, trimmedValue);
     }
     setIsEditingMessage(false);
   };

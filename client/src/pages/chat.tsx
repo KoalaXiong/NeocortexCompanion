@@ -110,7 +110,7 @@ export default function Chat() {
     },
   });
 
-  // Update message mutation with optimistic updates
+  // Update message mutation without conflicting optimistic updates
   const updateMessageMutation = useMutation({
     mutationFn: async ({ id, text }: { id: number; text: string }) => {
       const response = await apiRequest("PATCH", `/api/messages/${id}`, { text });
@@ -119,39 +119,8 @@ export default function Chat() {
       }
       return response.json();
     },
-    onMutate: async ({ id, text }) => {
-      // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
-      
-      // Snapshot previous value
-      const previousMessages = queryClient.getQueryData(["/api/conversations", conversationId, "messages"]);
-      
-      // Optimistically update cache
-      queryClient.setQueryData(
-        ["/api/conversations", conversationId, "messages"],
-        (oldData: any[]) => {
-          if (!oldData) return oldData;
-          return oldData.map(msg => 
-            msg.id === id ? { ...msg, text: text.trim() } : msg
-          );
-        }
-      );
-      
-      return { previousMessages };
-    },
-    onError: (error, variables, context) => {
-      // Rollback on error
-      if (context?.previousMessages) {
-        queryClient.setQueryData(
-          ["/api/conversations", conversationId, "messages"],
-          context.previousMessages
-        );
-      }
-      console.error('Failed to update message:', error);
-      preventAutoScroll.current = false;
-    },
     onSuccess: (updatedMessage) => {
-      // Update with server response to ensure consistency
+      // Immediately update the cache with server response
       queryClient.setQueryData(
         ["/api/conversations", conversationId, "messages"],
         (oldData: any[]) => {
@@ -161,11 +130,15 @@ export default function Chat() {
           );
         }
       );
-      preventAutoScroll.current = false;
-    },
-    onSettled: () => {
-      // Ensure data consistency
+      
+      // Force immediate refetch to ensure UI consistency
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+    },
+    onError: (error) => {
+      console.error('Failed to update message:', error);
+      // Refetch on error to ensure data consistency
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
     }
   });
 
@@ -296,18 +269,10 @@ export default function Chat() {
   };
 
   const handleMessageEdit = (messageId: number, newText: string) => {
-    // Mark as user action to prevent auto-scroll
-    isUserAction.current = true;
-
     // Update message text in the database
     updateMessageMutation.mutate({ 
       id: messageId, 
       text: newText.trim() 
-    }, {
-      onSuccess: () => {
-        // Force immediate re-fetch to ensure UI updates
-        queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
-      }
     });
   };
 
