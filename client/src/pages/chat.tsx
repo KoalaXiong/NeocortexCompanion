@@ -213,22 +213,38 @@ export default function Chat() {
   });
 
   useEffect(() => {
-    // Only auto-scroll when messages are added (not deleted or edited)
-    const messageAdded = messages.length > lastMessageCount.current;
-    lastMessageCount.current = messages.length;
-    
-    // Don't auto-scroll if container has saved scroll position (deletion in progress)
+    // Check if we have a saved scroll position (from deletion, translation, or other operations)
     const hasSavedScroll = messagesContainerRef.current?.hasAttribute('data-saved-scroll');
     
-    if (messageAdded && !hasSavedScroll && messages.length > 0) {
-      // Small delay to ensure DOM has rendered
-      setTimeout(() => {
-        if (!hasSavedScroll && messagesEndRef.current) {
-          messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-        }
-      }, 50);
+    if (hasSavedScroll) {
+      // Restore saved scroll position
+      const container = messagesContainerRef.current;
+      const savedPosition = container?.getAttribute('data-saved-scroll');
+      if (savedPosition && container) {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (container) {
+              container.scrollTop = parseInt(savedPosition);
+              container.removeAttribute('data-saved-scroll');
+            }
+          });
+        });
+      }
+    } else {
+      // Only auto-scroll when messages are added (not deleted, edited, or translated)
+      const messageAdded = messages.length > lastMessageCount.current;
+      lastMessageCount.current = messages.length;
+      
+      if (messageAdded && messages.length > 0) {
+        // Small delay to ensure DOM has rendered
+        setTimeout(() => {
+          if (!messagesContainerRef.current?.hasAttribute('data-saved-scroll') && messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+          }
+        }, 50);
+      }
     }
-  }, [messages.length]);
+  }, [messages]);
 
   // Selection handlers
   const handleSelectionChange = (messageId: number, selected: boolean) => {
@@ -356,6 +372,13 @@ export default function Chat() {
   const handleBilingualTranslation = async () => {
     if (!conversationId || selectedMessages.size === 0) return;
     
+    // Save scroll position before translation
+    if (messagesContainerRef.current) {
+      const container = messagesContainerRef.current;
+      const savedPosition = container.scrollTop;
+      container.setAttribute('data-saved-scroll', savedPosition.toString());
+    }
+    
     setIsTranslating(true);
     try {
       // Get selected messages that are eligible for translation
@@ -380,6 +403,10 @@ export default function Chat() {
         alert(`No eligible messages found for translation from ${getLanguageName(sourceLanguage)} to ${getLanguageName(targetLanguage)}.`);
         setShowBilingualDialog(false);
         setIsTranslating(false);
+        // Remove saved scroll position if operation is cancelled
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.removeAttribute('data-saved-scroll');
+        }
         return;
       }
 
@@ -395,6 +422,10 @@ export default function Chat() {
         if (!confirm(`Some selected messages already have ${getLanguageName(targetLanguage)} translations. Continue anyway?`)) {
           setShowBilingualDialog(false);
           setIsTranslating(false);
+          // Remove saved scroll position if operation is cancelled
+          if (messagesContainerRef.current) {
+            messagesContainerRef.current.removeAttribute('data-saved-scroll');
+          }
           return;
         }
       }
@@ -427,6 +458,21 @@ export default function Chat() {
         }
       }
 
+      // Restore scroll position after translations are created
+      if (messagesContainerRef.current) {
+        const container = messagesContainerRef.current;
+        const savedPosition = container.getAttribute('data-saved-scroll');
+        if (savedPosition) {
+          // Use requestAnimationFrame to ensure DOM updates before restoring scroll
+          requestAnimationFrame(() => {
+            if (container) {
+              container.scrollTop = parseInt(savedPosition);
+              container.removeAttribute('data-saved-scroll');
+            }
+          });
+        }
+      }
+
       // Refresh messages
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
       setShowBilingualDialog(false);
@@ -436,6 +482,10 @@ export default function Chat() {
     } catch (error) {
       console.error('Failed to translate selected messages:', error);
       alert('Failed to translate selected messages. Please try again.');
+      // Remove saved scroll position on error
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.removeAttribute('data-saved-scroll');
+      }
     } finally {
       setIsTranslating(false);
     }
