@@ -100,42 +100,19 @@ export default function BubbleCard({
     });
   };
 
-  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isDoubleClickRef = useRef(false);
-
-  const handleClick = (e: React.MouseEvent) => {
-    if (isConnectMode && onBubbleClick) {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      // Reset double-click flag
-      isDoubleClickRef.current = false;
-      
-      // Delay the click handler to see if a double-click follows
-      clickTimeoutRef.current = setTimeout(() => {
-        // Only execute if it wasn't a double-click
-        if (!isDoubleClickRef.current) {
-          onBubbleClick(bubble.id);
-        }
-      }, 300); // 300ms delay to detect double-click
-    }
-  };
-
   const handleDoubleClick = (e: React.MouseEvent) => {
     if (isConnectMode && onBubbleDoubleClick) {
       e.preventDefault();
       e.stopPropagation();
-      
-      // Set flag to prevent single-click handler from executing
-      isDoubleClickRef.current = true;
-      
-      // Clear the timeout
-      if (clickTimeoutRef.current) {
-        clearTimeout(clickTimeoutRef.current);
-        clickTimeoutRef.current = null;
-      }
-      
       onBubbleDoubleClick(bubble.id);
+    }
+  };
+
+  const handleRightClick = (e: React.MouseEvent) => {
+    if (isConnectMode && onBubbleClick) {
+      e.preventDefault();
+      e.stopPropagation();
+      onBubbleClick(bubble.id);
     }
   };
 
@@ -296,8 +273,8 @@ export default function BubbleCard({
         zIndex: isDragging ? 1000 : isHovered ? 200 : isSelected ? 50 : 10,
       }}
       onMouseDown={handleMouseDown}
-      onClick={handleClick}
       onDoubleClick={handleDoubleClick}
+      onContextMenu={handleRightClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
