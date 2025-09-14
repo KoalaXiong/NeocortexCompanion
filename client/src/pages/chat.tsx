@@ -425,15 +425,36 @@ export default function Chat() {
         .filter(m => selectedMessages.has(m.id))
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-      // Process each message individually to maintain positioning
-      for (const message of selectedMessagesList) {
+      // Helper function to calculate precise timestamp positioning
+      const calculateTranslationTimestamp = (currentMessage: typeof messages[0], allMessages: typeof messages) => {
+        const currentTime = new Date(currentMessage.createdAt).getTime();
+        
+        // Find the next message after the current one
+        const nextMessage = allMessages.find(msg => {
+          const msgTime = new Date(msg.createdAt).getTime();
+          return msgTime > currentTime;
+        });
+        
+        if (nextMessage) {
+          // Place translation exactly halfway between current and next message
+          const nextTime = new Date(nextMessage.createdAt).getTime();
+          const midpoint = currentTime + Math.floor((nextTime - currentTime) / 2);
+          return new Date(midpoint);
+        } else {
+          // If this is the last message, add just 1 millisecond
+          return new Date(currentTime + 1);
+        }
+      };
+
+      // Process each message sequentially to prevent race conditions
+      for (let i = 0; i < selectedMessagesList.length; i++) {
+        const message = selectedMessagesList[i];
+        
         try {
           const translatedText = await translateText(message.text, sourceLanguage, targetLanguage);
           
-          // Calculate timestamp to place translated message right after the original
-          // Add small increment (1 second) to ensure it appears after the original
-          const originalTime = new Date(message.createdAt);
-          const translatedTimestamp = new Date(originalTime.getTime() + 1000);
+          // Calculate precise timestamp positioning
+          const translatedTimestamp = calculateTranslationTimestamp(message, messages);
           
           // Create translated message with precise timestamp positioning
           const response = await fetch('/api/messages', {
@@ -455,20 +476,15 @@ export default function Chat() {
             throw new Error(`Failed to create translation for message ${message.id}`);
           }
 
-          // Immediately refresh after each translation to maintain order
-          queryClient.invalidateQueries({ 
-            queryKey: ["/api/conversations", conversationId, "messages"] 
-          });
-
-          // Small delay to ensure proper ordering in database
-          await new Promise(resolve => setTimeout(resolve, 100));
+          // Wait for database to process the request completely
+          await new Promise(resolve => setTimeout(resolve, 200));
 
         } catch (error) {
           console.error(`Failed to translate message ${message.id}:`, error);
         }
       }
 
-      // Final refresh to ensure all translations are displayed
+      // Single refresh at the end to display all translations at once
       queryClient.invalidateQueries({ 
         queryKey: ["/api/conversations", conversationId, "messages"] 
       });
