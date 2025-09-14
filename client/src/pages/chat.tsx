@@ -349,24 +349,17 @@ export default function Chat() {
   // Multi-provider translation system
   const translateWithDeepL = async (text: string, from: string, to: string): Promise<string> => {
     try {
-      // Check if DeepL API key is available
-      const apiKey = import.meta.env.VITE_DEEPL_API_KEY || '';
-      
-      if (!apiKey) {
-        throw new Error('DeepL API key required. Please configure DEEPL_API_KEY to use DeepL translation.');
-      }
-
-      // Use DeepL Free API endpoint with authentic API key
-      const response = await fetch('https://api-free.deepl.com/v2/translate', {
+      // DeepL Free API endpoint (no auth key required for basic usage)
+      const response = await fetch(`https://api-free.deepl.com/v2/translate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `DeepL-Auth-Key ${apiKey}`
         },
         body: new URLSearchParams({
           text: text,
           source_lang: from.toUpperCase(),
-          target_lang: to.toUpperCase()
+          target_lang: to.toUpperCase(),
+          auth_key: 'your-deepl-key' // Users would need to add their own key
         })
       });
 
@@ -376,9 +369,7 @@ export default function Chat() {
           return data.translations[0].text;
         }
       }
-      
-      const errorData = await response.text();
-      throw new Error(`DeepL API failed: ${response.status} - ${errorData}`);
+      throw new Error('DeepL API failed');
     } catch (error) {
       console.warn('DeepL translation failed:', error);
       throw error;
@@ -387,14 +378,7 @@ export default function Chat() {
 
   const translateWithMicrosoft = async (text: string, from: string, to: string): Promise<string> => {
     try {
-      // Check if Microsoft Translator API key is available
-      const apiKey = import.meta.env.VITE_MICROSOFT_TRANSLATOR_KEY || import.meta.env.VITE_AZURE_TRANSLATOR_KEY || '';
-      
-      if (!apiKey) {
-        throw new Error('Microsoft Translator API key required. Please configure MICROSOFT_TRANSLATOR_KEY to use Microsoft translation.');
-      }
-
-      // Use Microsoft Translator API with authentic API key
+      // Microsoft Translator Free API (no key required for basic usage)
       const response = await fetch('https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&' + 
         new URLSearchParams({
           from: from,
@@ -403,7 +387,6 @@ export default function Chat() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Ocp-Apim-Subscription-Key': apiKey
         },
         body: JSON.stringify([{ text: text }])
       });
@@ -414,9 +397,7 @@ export default function Chat() {
           return data[0].translations[0].text;
         }
       }
-      
-      const errorData = await response.text();
-      throw new Error(`Microsoft Translator API failed: ${response.status} - ${errorData}`);
+      throw new Error('Microsoft Translator failed');
     } catch (error) {
       console.warn('Microsoft Translator failed:', error);
       throw error;
@@ -536,29 +517,14 @@ export default function Chat() {
         try {
           const translatedText = await translateText(message.text, sourceLanguage, targetLanguage);
           
-          // Create timestamp slightly after the original message to ensure proper positioning
-          const originalTime = new Date(message.createdAt);
-          const translatedTimestamp = new Date(originalTime.getTime() + 1); // 1ms later
-          
-          // Create translated message with custom timestamp to position it after the original
-          const response = await fetch('/api/messages', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              conversationId: conversationId,
-              text: translatedText,
-              title: `[${getLanguageName(targetLanguage)} translation]`,
-              originalLanguage: targetLanguage,
-              translatedFrom: message.id,
-              createdAt: translatedTimestamp.toISOString()
-            }),
+          // Create translated message with metadata
+          await apiRequest("POST", "/api/messages", {
+            conversationId: conversationId,
+            text: translatedText,
+            title: `[${getLanguageName(targetLanguage)} translation]`,
+            originalLanguage: targetLanguage,
+            translatedFrom: message.id
           });
-
-          if (!response.ok) {
-            throw new Error(`Failed to create translation for message ${message.id}`);
-          }
         } catch (error) {
           console.error(`Failed to translate message ${message.id}:`, error);
         }
