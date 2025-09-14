@@ -523,7 +523,7 @@ export default function Bubbles() {
     setIsConnectMode(!isConnectMode);
     setSelectedBubbles([]);
     if (!isConnectMode) {
-      alert("Connection mode activated! Double-click bubbles to select and connect them.");
+      alert("Connection mode activated!\n\nHow to use:\n• Double-click first bubble to select it (purple ring)\n• Double-click second bubble to create connection\n• Right-click any bubble to remove its newest connection\n• Double-click selected bubble again to deselect");
     } else {
       alert("Connection mode deactivated.");
     }
@@ -555,7 +555,7 @@ export default function Bubbles() {
   const handleBubbleDoubleClick = (bubbleId: number) => {
     if (!isConnectMode) return;
     
-    // Always allow selection/deselection with double-click, regardless of existing connections
+    // Always allow selection/deselection with double-click
     if (selectedBubbles.includes(bubbleId)) {
       // Deselect if already selected
       setSelectedBubbles(prev => prev.filter(id => id !== bubbleId));
@@ -563,16 +563,33 @@ export default function Bubbles() {
     }
     
     if (selectedBubbles.length === 0) {
-      // Select first bubble (preserve existing connections)
+      // Select first bubble
       setSelectedBubbles([bubbleId]);
     } else if (selectedBubbles.length === 1) {
-      // Select second bubble and create connection
       const fromBubble = selectedBubbles[0];
       const toBubble = bubbleId;
       
-      // Always allow new connections (multiple connections between same bubbles allowed)
+      // Prevent self-connections
+      if (fromBubble === toBubble) {
+        return;
+      }
+      
+      // Check for existing connection to prevent duplicates
+      const existingConnection = connections.find(
+        conn => 
+          (conn.from === fromBubble && conn.to === toBubble) ||
+          (conn.from === toBubble && conn.to === fromBubble)
+      );
+      
+      if (existingConnection) {
+        // Connection already exists, just clear selection
+        setSelectedBubbles([]);
+        return;
+      }
+      
+      // Create new connection
       const newConnection = {
-        id: `${fromBubble}-${toBubble}-${Date.now()}`, // Add timestamp to make each connection unique
+        id: `${fromBubble}-${toBubble}-${Date.now()}`,
         from: fromBubble,
         to: toBubble
       };
@@ -585,10 +602,10 @@ export default function Bubbles() {
     }
   };
 
-  const handleBubbleClick = (bubbleId: number) => {
+  const handleBubbleRightClick = (bubbleId: number) => {
     if (!isConnectMode) return;
     
-    // Single click disconnects the most recent connection for this bubble
+    // Right-click removes the most recent connection for this bubble
     const existingConnections = connections.filter(
       conn => conn.from === bubbleId || conn.to === bubbleId
     );
@@ -786,7 +803,7 @@ export default function Bubbles() {
                   isCompact={isCompactMode}
                   isConnectMode={isConnectMode}
                   isSelected={isSelected}
-                  onBubbleClick={handleBubbleClick}
+                  onBubbleClick={handleBubbleRightClick}
                   onBubbleDoubleClick={handleBubbleDoubleClick}
                 />
               );
