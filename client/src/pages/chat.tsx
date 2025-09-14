@@ -365,12 +365,15 @@ export default function Chat() {
   };
 
   const handleBilingualTranslation = async () => {
-    if (!conversationId || messages.length === 0) return;
+    if (!conversationId || selectedMessages.size === 0) return;
     
     setIsTranslating(true);
     try {
+      // Get selected messages that are eligible for translation
+      const selectedMessagesList = messages.filter(message => selectedMessages.has(message.id));
+      
       // Filter to only original messages in the source language
-      const originalMessages = messages.filter(message => {
+      const originalMessages = selectedMessagesList.filter(message => {
         // Skip messages that start with language prefixes like [English], [Italian], etc
         const hasLanguagePrefix = /^\[[\w\s]+\]/.test(message.text);
         // Skip messages that are translations (have translatedFrom field)
@@ -384,17 +387,27 @@ export default function Chat() {
         return !hasLanguagePrefix && !isTranslation && matchesSourceLanguage;
       });
 
-      // Check if target language translations already exist (both old prefix format and new metadata format)
-      const existingTranslations = messages.filter(message => 
-        message.text.startsWith(`[${getLanguageName(targetLanguage)}]`) || 
-        (message.translatedFrom && detectTranslationLanguage(message.text) === targetLanguage)
-      );
-      
-      if (existingTranslations.length > 0) {
-        alert(`${getLanguageName(targetLanguage)} translations already exist in this conversation.`);
+      if (originalMessages.length === 0) {
+        alert(`No eligible messages found for translation from ${getLanguageName(sourceLanguage)} to ${getLanguageName(targetLanguage)}.`);
         setShowBilingualDialog(false);
         setIsTranslating(false);
         return;
+      }
+
+      // Check if any of the selected messages already have translations in target language
+      const selectedMessageIds = originalMessages.map(m => m.id);
+      const existingTranslations = messages.filter(message => 
+        selectedMessageIds.some(id => message.translatedFrom === id) &&
+        (message.text.startsWith(`[${getLanguageName(targetLanguage)}]`) || 
+         detectTranslationLanguage(message.text) === targetLanguage)
+      );
+      
+      if (existingTranslations.length > 0) {
+        if (!confirm(`Some selected messages already have ${getLanguageName(targetLanguage)} translations. Continue anyway?`)) {
+          setShowBilingualDialog(false);
+          setIsTranslating(false);
+          return;
+        }
       }
 
       for (const message of originalMessages) {
@@ -428,9 +441,12 @@ export default function Chat() {
       // Refresh messages
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
       setShowBilingualDialog(false);
+      
+      // Clear selection after translation
+      clearSelection();
     } catch (error) {
-      console.error('Failed to create bilingual conversation:', error);
-      alert('Failed to create bilingual conversation. Please try again.');
+      console.error('Failed to translate selected messages:', error);
+      alert('Failed to translate selected messages. Please try again.');
     } finally {
       setIsTranslating(false);
     }
@@ -697,86 +713,7 @@ export default function Chat() {
               />
             </Button>
             
-            <Dialog open={showBilingualDialog} onOpenChange={setShowBilingualDialog}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="hover:bg-white/20 text-white"
-                  title="Create bilingual conversation"
-                >
-                  <Languages className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Create Bilingual Conversation</DialogTitle>
-                  <DialogDescription>
-                    Add translations to all messages in this conversation. Translations will appear right after each original message.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">From Language (Auto-detected)</label>
-                    <Select value={sourceLanguage} onValueChange={setSourceLanguage}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="zh">Chinese</SelectItem>
-                        <SelectItem value="en">English</SelectItem>
-                        <SelectItem value="fr">French</SelectItem>
-                        <SelectItem value="de">German</SelectItem>
-                        <SelectItem value="it">Italian</SelectItem>
-                        <SelectItem value="es">Spanish</SelectItem>
-                        <SelectItem value="pt">Portuguese</SelectItem>
-                        <SelectItem value="ru">Russian</SelectItem>
-                        <SelectItem value="ja">Japanese</SelectItem>
-                        <SelectItem value="ko">Korean</SelectItem>
-                        <SelectItem value="ar">Arabic</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">To Language</label>
-                    <Select value={targetLanguage} onValueChange={setTargetLanguage}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="en">English</SelectItem>
-                        <SelectItem value="zh">Chinese</SelectItem>
-                        <SelectItem value="fr">French</SelectItem>
-                        <SelectItem value="de">German</SelectItem>
-                        <SelectItem value="it">Italian</SelectItem>
-                        <SelectItem value="es">Spanish</SelectItem>
-                        <SelectItem value="pt">Portuguese</SelectItem>
-                        <SelectItem value="ru">Russian</SelectItem>
-                        <SelectItem value="ja">Japanese</SelectItem>
-                        <SelectItem value="ko">Korean</SelectItem>
-                        <SelectItem value="ar">Arabic</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex gap-3 pt-4">
-                    <Button 
-                      onClick={() => setShowBilingualDialog(false)} 
-                      variant="outline" 
-                      className="flex-1"
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      onClick={handleBilingualTranslation} 
-                      className="flex-1"
-                      disabled={isTranslating || sourceLanguage === targetLanguage}
-                    >
-                      {isTranslating ? 'Translating...' : 'Create Bilingual'}
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+            
             
             {conversationId && (
               <Button
@@ -827,6 +764,15 @@ export default function Chat() {
               >
                 <Move className="h-4 w-4 mr-1" />
                 Move
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowBilingualDialog(true)}
+                disabled={selectedMessages.size === 0}
+              >
+                <Languages className="h-4 w-4 mr-1" />
+                Translate
               </Button>
             </div>
           </div>
@@ -982,6 +928,78 @@ export default function Chat() {
                   {removeFromOriginal ? "Messages will be moved" : "Messages will be copied"}
                 </p>
               </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Translate Selected Messages Dialog */}
+      <Dialog open={showBilingualDialog} onOpenChange={setShowBilingualDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Translate Selected Messages</DialogTitle>
+            <DialogDescription>
+              Add translations for the {selectedMessages.size} selected message{selectedMessages.size !== 1 ? 's' : ''}. Translations will appear right after each original message.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">From Language (Auto-detected)</label>
+              <Select value={sourceLanguage} onValueChange={setSourceLanguage}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="zh">Chinese</SelectItem>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="fr">French</SelectItem>
+                  <SelectItem value="de">German</SelectItem>
+                  <SelectItem value="it">Italian</SelectItem>
+                  <SelectItem value="es">Spanish</SelectItem>
+                  <SelectItem value="pt">Portuguese</SelectItem>
+                  <SelectItem value="ru">Russian</SelectItem>
+                  <SelectItem value="ja">Japanese</SelectItem>
+                  <SelectItem value="ko">Korean</SelectItem>
+                  <SelectItem value="ar">Arabic</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">To Language</label>
+              <Select value={targetLanguage} onValueChange={setTargetLanguage}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="zh">Chinese</SelectItem>
+                  <SelectItem value="fr">French</SelectItem>
+                  <SelectItem value="de">German</SelectItem>
+                  <SelectItem value="it">Italian</SelectItem>
+                  <SelectItem value="es">Spanish</SelectItem>
+                  <SelectItem value="pt">Portuguese</SelectItem>
+                  <SelectItem value="ru">Russian</SelectItem>
+                  <SelectItem value="ja">Japanese</SelectItem>
+                  <SelectItem value="ko">Korean</SelectItem>
+                  <SelectItem value="ar">Arabic</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-3 pt-4">
+              <Button 
+                onClick={() => setShowBilingualDialog(false)} 
+                variant="outline" 
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleBilingualTranslation} 
+                className="flex-1"
+                disabled={isTranslating || sourceLanguage === targetLanguage || selectedMessages.size === 0}
+              >
+                {isTranslating ? 'Translating...' : `Translate ${selectedMessages.size} Message${selectedMessages.size !== 1 ? 's' : ''}`}
+              </Button>
             </div>
           </div>
         </DialogContent>
