@@ -89,7 +89,7 @@ export class DatabaseStorage implements IStorage {
       }
 
       // Add message if it exists (leftJoin may return null)
-      if (row.messageId) {
+      if (row.messageId && row.messageText && row.messageCreatedAt) {
         conversationMap.get(convId)!.messages.push({
           id: row.messageId,
           text: row.messageText,
@@ -368,23 +368,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createArticle(article: InsertArticle): Promise<Article> {
-    const now = new Date().toISOString();
     const [newArticle] = await db
       .insert(articles)
-      .values({
-        ...article,
-        createdAt: now,
-        updatedAt: now,
-      })
+      .values(article)
       .returning();
     return newArticle;
   }
 
   async updateArticle(id: number, updates: Partial<InsertArticle>): Promise<Article> {
-    const updatedAt = new Date().toISOString();
     const [updated] = await db
       .update(articles)
-      .set({ ...updates, updatedAt })
+      .set(updates)
       .where(eq(articles.id, id))
       .returning();
 
