@@ -262,7 +262,11 @@ export default function BubbleCard({
       } ${
         isConnectMode ? 'cursor-pointer' : 'cursor-move'
       } ${
-        isSelected ? 'ring-4 ring-purple-400 ring-opacity-50' : ''
+        isSelected 
+          ? 'ring-4 ring-purple-500 ring-opacity-75 shadow-purple-200 shadow-lg' 
+          : isConnectMode && isHovered
+          ? 'ring-2 ring-blue-400 ring-opacity-60 shadow-blue-100 shadow-xl'
+          : ''
       }`}
       style={{
         left: position.x,
