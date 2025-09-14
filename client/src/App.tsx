@@ -11,11 +11,12 @@ import Chat from "@/pages/chat";
 import Bubbles from "@/pages/bubbles";
 import Article from "@/pages/article";
 import NotFound from "@/pages/not-found";
+import type { ConversationWithStats } from "@shared/schema";
 
 // Bubbles listing component - shows all conversations with bubbles
 function BubblesListing() {
   const [, navigate] = useLocation();
-  const { data: conversations = [] } = useQuery({
+  const { data: conversations = [] } = useQuery<ConversationWithStats[]>({
     queryKey: ["/api/conversations"],
   });
 
@@ -26,7 +27,7 @@ function BubblesListing() {
         <p className="text-gray-600 mb-6">Select a conversation to view its thought bubbles</p>
         
         <div className="grid gap-4">
-          {conversations.map((conversation: any) => (
+          {conversations.map((conversation) => (
             <div 
               key={conversation.id}
               className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
@@ -59,7 +60,7 @@ function BubblesListing() {
 // Articles listing component - shows all conversations with articles
 function ArticlesListing() {
   const [, navigate] = useLocation();
-  const { data: conversations = [] } = useQuery({
+  const { data: conversations = [] } = useQuery<ConversationWithStats[]>({
     queryKey: ["/api/conversations"],
   });
 
@@ -70,7 +71,7 @@ function ArticlesListing() {
         <p className="text-gray-600 mb-6">Select a conversation to create or view articles from its thought bubbles</p>
         
         <div className="grid gap-4">
-          {conversations.map((conversation: any) => (
+          {conversations.map((conversation) => (
             <div 
               key={conversation.id}
               className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
@@ -100,16 +101,6 @@ function ArticlesListing() {
   );
 }
 
-// Redirect component using wouter's navigation
-function RedirectToConversations() {
-  const [, navigate] = useLocation();
-  
-  useEffect(() => {
-    navigate('/conversations', { replace: true });
-  }, [navigate]);
-  
-  return null;
-}
 
 function Router() {
   const [location] = useLocation();
