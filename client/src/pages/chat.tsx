@@ -493,7 +493,6 @@ export default function Chat() {
       setShowBilingualDialog(false);
       setSelectedMessages(new Set());
       setMessageKeywords(new Map());
-      setIsSelectionMode(false);
     } catch (error) {
       console.error("Translation process failed:", error);
     } finally {
