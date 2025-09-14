@@ -169,7 +169,7 @@ export default function Chat() {
     }
   });
 
-  // Delete message mutation with optimistic updates
+  // Delete message mutation with optimistic updates and scroll preservation
   const deleteMessageMutation = useMutation({
     mutationFn: async (messageId: number) => {
       const response = await apiRequest("DELETE", `/api/messages/${messageId}`);
@@ -179,10 +179,16 @@ export default function Chat() {
       return messageId;
     },
     onMutate: async (messageId: number) => {
+      // Save current scroll position before deletion
+      if (messagesContainerRef.current) {
+        savedScrollPosition.current = messagesContainerRef.current.scrollTop;
+        preventAutoScroll.current = true;
+      }
+
       // Cancel any outgoing refetches to avoid overwriting optimistic update
       await queryClient.cancelQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
       
-      // Snapshot the previous value
+      // Snapshot the previous value and scroll position
       const previousMessages = queryClient.getQueryData(["/api/conversations", conversationId, "messages"]);
       
       // Optimistically update cache immediately (before server response)
@@ -205,7 +211,13 @@ export default function Chat() {
           context.previousMessages
         );
       }
+      // Reset scroll management on error
+      preventAutoScroll.current = false;
       console.error('Failed to delete message:', error);
+    },
+    onSuccess: () => {
+      // Keep scroll position preserved after successful deletion
+      // preventAutoScroll.current remains true to maintain position
     },
     onSettled: () => {
       // Always refetch after error or success to ensure consistency
@@ -218,10 +230,14 @@ export default function Chat() {
     if (preventAutoScroll.current && messagesContainerRef.current) {
       // Restore saved scroll position without animation
       const container = messagesContainerRef.current;
-      container.scrollTop = savedScrollPosition.current;
-      preventAutoScroll.current = false;
+      // Use requestAnimationFrame to ensure DOM has updated
+      requestAnimationFrame(() => {
+        container.scrollTop = savedScrollPosition.current;
+        // Reset the flag after scroll position is restored
+        preventAutoScroll.current = false;
+      });
     } else if (!preventAutoScroll.current && messages.length > 0) {
-      // Auto-scroll to bottom for new messages
+      // Auto-scroll to bottom for new messages only
       setTimeout(() => {
         if (!preventAutoScroll.current) {
           messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -289,6 +305,11 @@ export default function Chat() {
 
   const handleMessageDelete = (messageId: number) => {
     if (confirm('Are you sure you want to delete this message?')) {
+      // Additional scroll position saving before deletion
+      if (messagesContainerRef.current) {
+        savedScrollPosition.current = messagesContainerRef.current.scrollTop;
+        preventAutoScroll.current = true;
+      }
       deleteMessageMutation.mutate(messageId);
     }
   };
