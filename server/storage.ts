@@ -287,13 +287,19 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMessage(id: number): Promise<void> {
     try {
-      // First delete any translations that reference this message
-      await this.db.delete(messages).where(eq(messages.translatedFrom, id));
+      // Use transaction for atomic deletion
+      await db.transaction(async (tx) => {
+        // First delete any associated bubbles
+        await tx.delete(bubbles).where(eq(bubbles.messageId, id));
+        
+        // Delete any translations that reference this message
+        await tx.delete(messages).where(eq(messages.translatedFrom, id));
 
-      // Then delete the message itself
-      const result = await this.db.delete(messages).where(eq(messages.id, id));
-
-      console.log(`Deleted message ${id}, affected rows:`, result);
+        // Then delete the message itself
+        const result = await tx.delete(messages).where(eq(messages.id, id));
+        
+        console.log(`Deleted message ${id}, affected rows:`, result);
+      });
     } catch (error) {
       console.error(`Error deleting message ${id}:`, error);
       throw new Error(`Failed to delete message: ${error instanceof Error ? error.message : 'Unknown error'}`);

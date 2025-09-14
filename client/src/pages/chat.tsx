@@ -169,7 +169,7 @@ export default function Chat() {
     }
   });
 
-  // Delete message mutation with simplified scroll management
+  // Delete message mutation with preserved scroll position
   const deleteMessageMutation = useMutation({
     mutationFn: async (messageId: number) => {
       const response = await apiRequest("DELETE", `/api/messages/${messageId}`);
@@ -179,8 +179,14 @@ export default function Chat() {
       return messageId;
     },
     onMutate: async (messageId: number) => {
-      // Mark this as a user action to prevent auto-scroll
-      isUserAction.current = true;
+      // Save current scroll position before deletion
+      if (messagesContainerRef.current) {
+        const container = messagesContainerRef.current;
+        const savedPosition = container.scrollTop;
+        
+        // Store scroll position in a ref that won't trigger re-renders
+        container.setAttribute('data-saved-scroll', savedPosition.toString());
+      }
 
       // Cancel any outgoing refetches to avoid overwriting optimistic update
       await queryClient.cancelQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
@@ -208,22 +214,28 @@ export default function Chat() {
           context.previousMessages
         );
       }
-      // Reset user action flag on error
-      isUserAction.current = false;
       console.error('Failed to delete message:', error);
     },
     onSuccess: () => {
-      // Keep user action flag set to prevent auto-scroll after successful deletion
+      // Restore scroll position after successful deletion
+      if (messagesContainerRef.current) {
+        const container = messagesContainerRef.current;
+        const savedPosition = container.getAttribute('data-saved-scroll');
+        if (savedPosition) {
+          // Use requestAnimationFrame to ensure DOM has updated
+          requestAnimationFrame(() => {
+            if (container) {
+              container.scrollTop = parseInt(savedPosition);
+              container.removeAttribute('data-saved-scroll');
+            }
+          });
+        }
+      }
     },
     onSettled: () => {
       // Always refetch after error or success to ensure consistency
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
-      
-      // Reset user action flag after some delay to allow normal scrolling to resume
-      setTimeout(() => {
-        isUserAction.current = false;
-      }, 500);
     }
   });
 
@@ -232,10 +244,13 @@ export default function Chat() {
     const messageAdded = messages.length > lastMessageCount.current;
     lastMessageCount.current = messages.length;
     
-    if (messageAdded && !isUserAction.current && messages.length > 0) {
+    // Don't auto-scroll if container has saved scroll position (deletion in progress)
+    const hasSavedScroll = messagesContainerRef.current?.hasAttribute('data-saved-scroll');
+    
+    if (messageAdded && !hasSavedScroll && messages.length > 0) {
       // Small delay to ensure DOM has rendered
       setTimeout(() => {
-        if (!isUserAction.current && messagesEndRef.current) {
+        if (!hasSavedScroll && messagesEndRef.current) {
           messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
         }
       }, 50);
