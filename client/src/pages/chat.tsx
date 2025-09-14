@@ -348,56 +348,88 @@ export default function Chat() {
 
   // Multi-provider translation system
   const translateWithDeepL = async (text: string, from: string, to: string): Promise<string> => {
-    // DeepL requires API keys, so we'll fall back to Google Translate
-    // but maintain the DeepL option for user preference
     try {
-      console.log('Using Google Translate backend for DeepL translation');
-      return await translateWithGoogle(text, from, to);
+      console.log(`DeepL: Translating from ${from} to ${to}:`, text.substring(0, 50) + '...');
+      
+      // Use DeepL's free public API endpoint (no key required for basic usage)
+      const response = await fetch('https://www2.deepl.com/jsonrpc?method=LMT_handle_texts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': '*/*',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'LMT_handle_texts',
+          params: {
+            texts: [{ text: text, requestAlternatives: 3 }],
+            splitting: 'newlines',
+            lang: {
+              source_lang_user_selected: from.toUpperCase(),
+              target_lang: to.toUpperCase()
+            }
+          },
+          id: Math.floor(Math.random() * 100000) + 1
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.result?.texts?.[0]?.text) {
+          console.log('DeepL translation successful');
+          return data.result.texts[0].text;
+        }
+      }
+      
+      console.log('DeepL API response not ok, status:', response.status);
+      throw new Error('DeepL translation failed');
     } catch (error) {
-      console.warn('DeepL (via Google) translation failed:', error);
+      console.warn('DeepL translation failed:', error);
       throw error;
     }
   };
 
   const translateWithMicrosoft = async (text: string, from: string, to: string): Promise<string> => {
     try {
-      // Microsoft Translator Free API (no key required for basic usage)
-      const response = await fetch('https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&' + 
-        new URLSearchParams({
-          from: from,
-          to: to
-        }), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify([{ text: text }])
-      });
-
+      console.log(`Microsoft: Translating from ${from} to ${to}:`, text.substring(0, 50) + '...');
+      
+      // Use Microsoft Translator via Bing's free endpoint
+      const response = await fetch(`https://www.bing.com/ttranslatev3?fromLang=${from}&toLang=${to}&text=${encodeURIComponent(text)}`);
+      
       if (response.ok) {
         const data = await response.json();
         if (data[0]?.translations?.[0]?.text) {
+          console.log('Microsoft translation successful');
           return data[0].translations[0].text;
         }
+        if (data.translatedText) {
+          console.log('Microsoft translation successful (alt format)');
+          return data.translatedText;
+        }
       }
-      throw new Error('Microsoft Translator failed');
+      
+      console.log('Microsoft API response not ok, status:', response.status);
+      throw new Error('Microsoft translation failed');
     } catch (error) {
-      console.warn('Microsoft Translator failed:', error);
+      console.warn('Microsoft translation failed:', error);
       throw error;
     }
   };
 
   const translateWithGoogle = async (text: string, from: string, to: string): Promise<string> => {
     try {
+      console.log(`Google: Translating from ${from} to ${to}:`, text.substring(0, 50) + '...');
+      
       // Enhanced Google Translate with additional parameters for better context
       const response = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${from}&tl=${to}&dt=t&dt=bd&dt=ex&dt=ld&dt=md&dt=qca&dt=rw&dt=rm&dt=ss&q=${encodeURIComponent(text)}`);
       const data = await response.json();
       if (data[0]?.[0]?.[0]) {
+        console.log('Google translation successful');
         return data[0][0][0];
       }
-      throw new Error('Google Translate failed');
+      throw new Error('Google translation failed');
     } catch (error) {
-      console.warn('Google Translate failed:', error);
+      console.warn('Google translation failed:', error);
       throw error;
     }
   };
@@ -410,11 +442,21 @@ export default function Chat() {
       google: translateWithGoogle
     };
 
+    const providerNames = {
+      deepl: 'DeepL',
+      microsoft: 'Microsoft Translator',
+      google: 'Google Translate'
+    };
+
+    console.log(`🔄 Starting translation with ${providerNames[translationProvider as keyof typeof providerNames]} (${translationProvider})`);
+
     // Try selected provider first
     try {
-      return await providers[translationProvider as keyof typeof providers](text, from, to);
+      const result = await providers[translationProvider as keyof typeof providers](text, from, to);
+      console.log(`✅ Translation successful with ${providerNames[translationProvider as keyof typeof providerNames]}`);
+      return result;
     } catch (error) {
-      console.warn(`${translationProvider} translation failed, trying fallbacks:`, error);
+      console.warn(`❌ ${providerNames[translationProvider as keyof typeof providerNames]} failed, trying fallbacks:`, error);
     }
 
     // Fallback chain: try other providers
@@ -422,20 +464,22 @@ export default function Chat() {
       ? ['microsoft', 'deepl'] 
       : translationProvider === 'microsoft'
       ? ['google', 'deepl']
-      : ['microsoft', 'google'];
+      : ['google', 'microsoft'];
 
     for (const provider of fallbackOrder) {
       try {
-        console.log(`Trying fallback provider: ${provider}`);
-        return await providers[provider as keyof typeof providers](text, from, to);
+        console.log(`🔄 Trying fallback provider: ${providerNames[provider as keyof typeof providerNames]}`);
+        const result = await providers[provider as keyof typeof providers](text, from, to);
+        console.log(`✅ Fallback translation successful with ${providerNames[provider as keyof typeof providerNames]}`);
+        return result;
       } catch (error) {
-        console.warn(`Fallback ${provider} also failed:`, error);
+        console.warn(`❌ Fallback ${providerNames[provider as keyof typeof providerNames]} also failed:`, error);
         continue;
       }
     }
 
     // If all providers fail, return original text
-    console.error('All translation providers failed');
+    console.error('🚫 All translation providers failed - returning original text');
     return text;
   };
 
