@@ -500,14 +500,29 @@ export default function Chat() {
         try {
           const translatedText = await translateText(message.text, sourceLanguage, targetLanguage);
           
-          // Create translated message with metadata
-          await apiRequest("POST", "/api/messages", {
-            conversationId: conversationId,
-            text: translatedText,
-            title: `[${getLanguageName(targetLanguage)} translation]`,
-            originalLanguage: targetLanguage,
-            translatedFrom: message.id
+          // Create timestamp slightly after the original message to ensure proper positioning
+          const originalTime = new Date(message.createdAt);
+          const translatedTimestamp = new Date(originalTime.getTime() + 1); // 1ms later
+          
+          // Create translated message with custom timestamp to position it after the original
+          const response = await fetch('/api/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              conversationId: conversationId,
+              text: translatedText,
+              title: `[${getLanguageName(targetLanguage)} translation]`,
+              originalLanguage: targetLanguage,
+              translatedFrom: message.id,
+              createdAt: translatedTimestamp.toISOString()
+            }),
           });
+
+          if (!response.ok) {
+            throw new Error(`Failed to create translation for message ${message.id}`);
+          }
         } catch (error) {
           console.error(`Failed to translate message ${message.id}:`, error);
         }
