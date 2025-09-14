@@ -75,7 +75,7 @@ export class DatabaseStorage implements IStorage {
 
     for (const row of conversationsWithMessages) {
       const convId = row.id;
-      
+
       if (!conversationMap.has(convId)) {
         conversationMap.set(convId, {
           conversation: {
@@ -142,7 +142,7 @@ export class DatabaseStorage implements IStorage {
       .set({ ...updates, updatedAt })
       .where(eq(conversations.id, id))
       .returning();
-    
+
     if (!updated) throw new Error('Conversation not found');
     return updated;
   }
@@ -153,11 +153,11 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(messages)
       .where(eq(messages.conversationId, id));
-    
+
     for (const message of conversationMessages) {
       await db.delete(bubbles).where(eq(bubbles.messageId, message.id));
     }
-    
+
     await db.delete(messages).where(eq(messages.conversationId, id));
     await db.delete(conversations).where(eq(conversations.id, id));
   }
@@ -224,7 +224,7 @@ export class DatabaseStorage implements IStorage {
       ...message,
       createdAt,
     };
-    
+
     // Use transaction for atomic operations
     const result = await db.transaction(async (tx) => {
       // Insert message
@@ -232,7 +232,7 @@ export class DatabaseStorage implements IStorage {
         .insert(messages)
         .values(messageData)
         .returning();
-      
+
       // Update conversation's updatedAt in same transaction
       await tx
         .update(conversations)
@@ -253,31 +253,31 @@ export class DatabaseStorage implements IStorage {
         .set(updates)
         .where(eq(messages.id, id))
         .returning();
-      
+
       if (!updated) throw new Error('Message not found');
-      
+
       // Update conversation's updatedAt timestamp
       await tx
         .update(conversations)
         .set({ updatedAt: new Date().toISOString() })
         .where(eq(conversations.id, updated.conversationId));
-      
+
       return updated;
     });
-    
+
     return result;
   }
 
   // Add bulk delete operation for better performance
   async deleteMultipleMessages(messageIds: number[]): Promise<void> {
     if (messageIds.length === 0) return;
-    
+
     await db.transaction(async (tx) => {
       // Delete all associated bubbles
       for (const messageId of messageIds) {
         await tx.delete(bubbles).where(eq(bubbles.messageId, messageId));
       }
-      
+
       // Delete all messages
       for (const messageId of messageIds) {
         await tx.delete(messages).where(eq(messages.id, messageId));
@@ -286,19 +286,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteMessage(id: number): Promise<void> {
-    // Use transaction for atomic operations
-    await db.transaction(async (tx) => {
-      // Delete associated bubble first (foreign key constraint)
-      await tx.delete(bubbles).where(eq(bubbles.messageId, id));
-      
-      // Delete the message
-      const result = await tx.delete(messages).where(eq(messages.id, id));
-      
-      // Check if message actually existed
-      if (result.changes === 0) {
-        throw new Error('Message not found');
-      }
-    });
+    try {
+      // First delete any translations that reference this message
+      await this.db.delete(messages).where(eq(messages.translatedFrom, id));
+
+      // Then delete the message itself
+      const result = await this.db.delete(messages).where(eq(messages.id, id));
+
+      console.log(`Deleted message ${id}, affected rows:`, result);
+    } catch (error) {
+      console.error(`Error deleting message ${id}:`, error);
+      throw new Error(`Failed to delete message: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   // Bubbles
@@ -309,18 +308,18 @@ export class DatabaseStorage implements IStorage {
       .where(eq(messages.conversationId, conversationId));
 
     const bubblesWithMessages: BubbleWithMessage[] = [];
-    
+
     for (const message of conversationMessages) {
       const [bubble] = await db
         .select()
         .from(bubbles)
         .where(eq(bubbles.messageId, message.id));
-      
+
       if (bubble) {
         bubblesWithMessages.push({ ...bubble, message });
       }
     }
-    
+
     return bubblesWithMessages;
   }
 
@@ -343,7 +342,7 @@ export class DatabaseStorage implements IStorage {
       .set(updates)
       .where(eq(bubbles.id, id))
       .returning();
-    
+
     if (!updated) throw new Error('Bubble not found');
     return updated;
   }
@@ -382,7 +381,7 @@ export class DatabaseStorage implements IStorage {
       .set({ ...updates, updatedAt })
       .where(eq(articles.id, id))
       .returning();
-    
+
     if (!updated) throw new Error('Article not found');
     return updated;
   }

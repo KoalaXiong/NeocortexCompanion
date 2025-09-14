@@ -30,8 +30,8 @@ export default function Chat() {
   const [sourceLanguage, setSourceLanguage] = useState("zh");
   const [targetLanguage, setTargetLanguage] = useState("en");
   const [isTranslating, setIsTranslating] = useState(false);
-  const preventAutoScroll = useRef(false);
-  const savedScrollPosition = useRef<number>(0);
+  const isUserAction = useRef(false);
+  const lastMessageCount = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -169,7 +169,7 @@ export default function Chat() {
     }
   });
 
-  // Delete message mutation with optimistic updates and scroll preservation
+  // Delete message mutation with simplified scroll management
   const deleteMessageMutation = useMutation({
     mutationFn: async (messageId: number) => {
       const response = await apiRequest("DELETE", `/api/messages/${messageId}`);
@@ -179,16 +179,13 @@ export default function Chat() {
       return messageId;
     },
     onMutate: async (messageId: number) => {
-      // Save current scroll position before deletion
-      if (messagesContainerRef.current) {
-        savedScrollPosition.current = messagesContainerRef.current.scrollTop;
-        preventAutoScroll.current = true;
-      }
+      // Mark this as a user action to prevent auto-scroll
+      isUserAction.current = true;
 
       // Cancel any outgoing refetches to avoid overwriting optimistic update
       await queryClient.cancelQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
       
-      // Snapshot the previous value and scroll position
+      // Snapshot the previous value
       const previousMessages = queryClient.getQueryData(["/api/conversations", conversationId, "messages"]);
       
       // Optimistically update cache immediately (before server response)
@@ -211,65 +208,39 @@ export default function Chat() {
           context.previousMessages
         );
       }
-      // Reset scroll management on error
-      preventAutoScroll.current = false;
+      // Reset user action flag on error
+      isUserAction.current = false;
       console.error('Failed to delete message:', error);
     },
     onSuccess: () => {
-      // Keep scroll position preserved after successful deletion
-      // Ensure scroll position is maintained after server response
-      if (messagesContainerRef.current) {
-        const container = messagesContainerRef.current;
-        setTimeout(() => {
-          if (preventAutoScroll.current) {
-            container.scrollTop = savedScrollPosition.current;
-          }
-        }, 10);
-      }
+      // Keep user action flag set to prevent auto-scroll after successful deletion
     },
     onSettled: () => {
       // Always refetch after error or success to ensure consistency
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
       
-      // Final scroll position check after refetch
-      if (preventAutoScroll.current && messagesContainerRef.current) {
-        setTimeout(() => {
-          if (messagesContainerRef.current && preventAutoScroll.current) {
-            messagesContainerRef.current.scrollTop = savedScrollPosition.current;
-            preventAutoScroll.current = false;
-          }
-        }, 100);
-      }
+      // Reset user action flag after some delay to allow normal scrolling to resume
+      setTimeout(() => {
+        isUserAction.current = false;
+      }, 500);
     }
   });
 
   useEffect(() => {
-    if (preventAutoScroll.current && messagesContainerRef.current) {
-      // Restore saved scroll position without animation
-      const container = messagesContainerRef.current;
-      // Use multiple frames to ensure DOM has fully updated
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (container && preventAutoScroll.current) {
-            container.scrollTop = savedScrollPosition.current;
-            // Reset the flag after scroll position is restored
-            preventAutoScroll.current = false;
-          }
-        });
-      });
-    } else if (!preventAutoScroll.current && messages.length > 0) {
-      // Only auto-scroll to bottom for new messages, not after deletions or edits
-      const shouldAutoScroll = !preventAutoScroll.current;
-      if (shouldAutoScroll) {
-        setTimeout(() => {
-          if (!preventAutoScroll.current && messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-          }
-        }, 50);
-      }
+    // Only auto-scroll when messages are added (not deleted or edited)
+    const messageAdded = messages.length > lastMessageCount.current;
+    lastMessageCount.current = messages.length;
+    
+    if (messageAdded && !isUserAction.current && messages.length > 0) {
+      // Small delay to ensure DOM has rendered
+      setTimeout(() => {
+        if (!isUserAction.current && messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 50);
     }
-  }, [messages]);
+  }, [messages.length]);
 
   // Selection handlers
   const handleSelectionChange = (messageId: number, selected: boolean) => {
@@ -310,11 +281,8 @@ export default function Chat() {
   };
 
   const handleMessageEdit = (messageId: number, newText: string) => {
-    // Store the current scroll position
-    if (messagesContainerRef.current) {
-      savedScrollPosition.current = messagesContainerRef.current.scrollTop;
-      preventAutoScroll.current = true;
-    }
+    // Mark as user action to prevent auto-scroll
+    isUserAction.current = true;
 
     // Update message text in the database
     updateMessageMutation.mutate({ 
@@ -330,11 +298,6 @@ export default function Chat() {
 
   const handleMessageDelete = (messageId: number) => {
     if (confirm('Are you sure you want to delete this message?')) {
-      // Additional scroll position saving before deletion
-      if (messagesContainerRef.current) {
-        savedScrollPosition.current = messagesContainerRef.current.scrollTop;
-        preventAutoScroll.current = true;
-      }
       deleteMessageMutation.mutate(messageId);
     }
   };
@@ -523,18 +486,20 @@ export default function Chat() {
 
   const updateMessageTitle = async (messageId: number, title: string) => {
     try {
-      // Save current scroll position and set flag to prevent auto-scroll
-      if (messagesContainerRef.current) {
-        savedScrollPosition.current = messagesContainerRef.current.scrollTop;
-        preventAutoScroll.current = true;
-      }
+      // Mark as user action to prevent auto-scroll
+      isUserAction.current = true;
       
       await apiRequest("PATCH", `/api/messages/${messageId}`, { title });
       // Refresh messages to show the updated title
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
+      
+      // Reset user action flag after short delay
+      setTimeout(() => {
+        isUserAction.current = false;
+      }, 300);
     } catch (error) {
       console.error("Error updating message title:", error);
-      preventAutoScroll.current = false;
+      isUserAction.current = false;
     }
   };
 
