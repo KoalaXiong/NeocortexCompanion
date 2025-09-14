@@ -465,7 +465,7 @@ export default function Chat() {
             body: JSON.stringify({
               conversationId: conversationId,
               text: translatedText,
-              title: `[${getLanguageName(targetLanguage)} translation]`,
+              title: "",
               originalLanguage: targetLanguage,
               translatedFrom: message.id,
               createdAt: translatedTimestamp.toISOString()
