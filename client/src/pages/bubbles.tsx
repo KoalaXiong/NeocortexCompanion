@@ -520,19 +520,24 @@ export default function Bubbles() {
   };
 
   const handleConnectMode = () => {
+    console.log('🔗 Connection mode toggle - current state:', isConnectMode);
     setIsConnectMode(!isConnectMode);
     setSelectedBubbles([]);
     if (!isConnectMode) {
+      console.log('🔗 Connection mode ACTIVATED');
       alert("Connection mode activated!\n\nHow to use:\n• Double-click first bubble to select it (purple ring)\n• Double-click second bubble to create connection\n• Right-click any bubble to remove its newest connection\n• Double-click selected bubble again to deselect");
     } else {
+      console.log('🔗 Connection mode DEACTIVATED');
       alert("Connection mode deactivated.");
     }
   };
 
   // Helper functions for connection management
   const addConnection = useCallback((connection: {id: string; from: number; to: number}) => {
+    console.log('➕ Adding connection:', connection);
     setConnections(prev => {
       const updated = [...prev, connection];
+      console.log('💾 Saving connections to localStorage. Total:', updated.length);
       // Save to localStorage
       if (typeof window !== 'undefined' && id) {
         localStorage.setItem(`bubbleConnections_${id}`, JSON.stringify(updated));
@@ -553,24 +558,35 @@ export default function Bubbles() {
   }, [connections, id]);
 
   const handleBubbleDoubleClick = (bubbleId: number) => {
-    if (!isConnectMode) return;
+    console.log('🖱️ Double-click detected on bubble:', bubbleId, 'Connect mode:', isConnectMode);
+    
+    if (!isConnectMode) {
+      console.log('🚫 Double-click ignored - connection mode not active');
+      return;
+    }
+    
+    console.log('📊 Current state - selectedBubbles:', selectedBubbles, 'connections:', connections.length);
     
     // Always allow selection/deselection with double-click
     if (selectedBubbles.includes(bubbleId)) {
+      console.log('🔄 Deselecting bubble:', bubbleId);
       // Deselect if already selected
       setSelectedBubbles(prev => prev.filter(id => id !== bubbleId));
       return;
     }
     
     if (selectedBubbles.length === 0) {
+      console.log('✅ Selecting first bubble:', bubbleId);
       // Select first bubble
       setSelectedBubbles([bubbleId]);
     } else if (selectedBubbles.length === 1) {
       const fromBubble = selectedBubbles[0];
       const toBubble = bubbleId;
+      console.log('🔗 Attempting connection from', fromBubble, 'to', toBubble);
       
       // Prevent self-connections
       if (fromBubble === toBubble) {
+        console.log('🚫 Prevented self-connection');
         return;
       }
       
@@ -582,6 +598,7 @@ export default function Bubbles() {
       );
       
       if (existingConnection) {
+        console.log('🚫 Connection already exists:', existingConnection);
         // Connection already exists, just clear selection
         setSelectedBubbles([]);
         return;
@@ -593,10 +610,12 @@ export default function Bubbles() {
         from: fromBubble,
         to: toBubble
       };
+      console.log('🎯 Creating new connection:', newConnection);
       addConnection(newConnection);
       
       setSelectedBubbles([]);
     } else {
+      console.log('🔄 Resetting selection to single bubble:', bubbleId);
       // Reset selection if more than 2 somehow
       setSelectedBubbles([bubbleId]);
     }
