@@ -45,6 +45,9 @@ export default function MessageBubble({
     if (message.translatedFrom) {
       // This is a translation - detect language by content
       const text = message.text;
+      // Check for Japanese first (Hiragana and Katakana are unique to Japanese)
+      if (/[\u3040-\u309f]/.test(text) || /[\u30a0-\u30ff]/.test(text)) return 'Japanese';
+      // Check for Chinese (Kanji/Hanzi characters without Japanese scripts)
       if (/[\u4e00-\u9fff]/.test(text)) return 'Chinese';
       if (/[àèéìíîòóùúûü]/.test(text.toLowerCase()) || /zione|mente|essere|quello|questo/.test(text.toLowerCase())) return 'Italian';
       return 'English'; // Default for translations
@@ -70,6 +73,9 @@ export default function MessageBubble({
     
     // Legacy detection for old messages without originalLanguage metadata
     const text = message.text;
+    // Check for Japanese first (Hiragana and Katakana are unique to Japanese)
+    if (/[\u3040-\u309f]/.test(text) || /[\u30a0-\u30ff]/.test(text)) return 'Japanese';
+    // Check for Chinese (Kanji/Hanzi characters without Japanese scripts)
     if (/[\u4e00-\u9fff]/.test(text)) return 'Chinese';
     
     return null; // No language indicator for other cases

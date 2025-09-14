@@ -212,6 +212,9 @@ export default function BubbleCard({
       
       // Detect language from message content
       const detectLanguage = (text: string): string => {
+        // Check for Japanese first (Hiragana and Katakana are unique to Japanese)
+        if (/[\u3040-\u309f]/.test(text) || /[\u30a0-\u30ff]/.test(text)) return 'ja';
+        // Check for Chinese (Kanji/Hanzi characters without Japanese scripts)
         if (/[\u4e00-\u9fff]/.test(text)) return 'zh';
         if (/[àèéìíîòóùúûü]/.test(text.toLowerCase()) || 
             /\b(quello|questo|essere|molto|tutto|anche|fare|dire|dove|come|quando|perché|cosa|dovrebbe|persone|normali)\b/i.test(text)) {
