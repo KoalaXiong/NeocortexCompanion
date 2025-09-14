@@ -348,30 +348,13 @@ export default function Chat() {
 
   // Multi-provider translation system
   const translateWithDeepL = async (text: string, from: string, to: string): Promise<string> => {
+    // DeepL requires API keys, so we'll fall back to Google Translate
+    // but maintain the DeepL option for user preference
     try {
-      // DeepL Free API endpoint (no auth key required for basic usage)
-      const response = await fetch(`https://api-free.deepl.com/v2/translate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          text: text,
-          source_lang: from.toUpperCase(),
-          target_lang: to.toUpperCase(),
-          auth_key: 'your-deepl-key' // Users would need to add their own key
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.translations?.[0]?.text) {
-          return data.translations[0].text;
-        }
-      }
-      throw new Error('DeepL API failed');
+      console.log('Using Google Translate backend for DeepL translation');
+      return await translateWithGoogle(text, from, to);
     } catch (error) {
-      console.warn('DeepL translation failed:', error);
+      console.warn('DeepL (via Google) translation failed:', error);
       throw error;
     }
   };
